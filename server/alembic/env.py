@@ -1,12 +1,14 @@
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 
 from app.config import settings
 from app.db import Base
 from app import models  # noqa: F401
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# NOTA: no usar config.set_main_option("sqlalchemy.url", ...) porque
+# ConfigParser valida sintaxis de interpolación y explota con passwords
+# que contienen % (ej: %40). La URL se pasa directo al engine.
 
 target_metadata = Base.metadata
 
@@ -18,8 +20,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    connectable = engine_from_config(
-        {"sqlalchemy.url": settings.database_url}, prefix="sqlalchemy.", poolclass=pool.NullPool)
+    connectable = create_engine(settings.database_url, poolclass=pool.NullPool)
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
