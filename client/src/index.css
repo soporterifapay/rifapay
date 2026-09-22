@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-slate-50 text-slate-900; }
+.card { @apply bg-white rounded-2xl shadow p-5; }
+.btn { @apply rounded-xl px-4 py-2 font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50; }
+.btn-sec { @apply rounded-xl px-4 py-2 font-medium bg-slate-200 hover:bg-slate-300; }
+.input { @apply w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
+.ticket-free { @apply bg-emerald-100 hover:bg-emerald-200 border border-emerald-300; }
+.ticket-res { @apply bg-amber-200 border border-amber-400; }
+.ticket-sold { @apply bg-slate-300 text-slate-500; }
