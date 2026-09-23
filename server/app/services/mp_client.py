@@ -5,7 +5,7 @@
 """
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -125,10 +125,43 @@ def get_payment(access_token: str, payment_id: str) -> dict:
 
 
 def parse_mp_date(raw: str) -> datetime:
+    """Parsea fecha MP a UTC naive. Respeta el offset (-04:00, Z, etc).
+
+    BUG que esto corrige: partir por '.' tiraba el offset y dejaba la hora
+    local (14:33) comparada contra UTC (18:33) -> el pago parecía 4h ANTES
+    de la orden y nunca matcheaba.
+    """
     try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00").split(".")[0]).replace(tzinfo=None)
+        dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
     except Exception:
         return datetime.utcnow()
+
+
+def repair_movement_dates(db) -> int:
+    """Repara fechas mal parseadas usando el raw_json guardado. Devuelve corregidas."""
+    import json as _json
+
+    from .. import models
+
+    fixed = 0
+    for mov in db.query(models.Movement).all():
+        try:
+            raw = _json.loads(mov.raw_json or "{}")
+            dc = raw.get("date_created")
+            if not dc:
+                continue
+            good = parse_mp_date(str(dc))
+            if abs((good - mov.date_created).total_seconds()) > 60:
+                mov.date_created = good
+                fixed += 1
+        except Exception:
+            continue
+    if fixed:
+        db.commit()
+    return fixed
 
 
 def to_movement(payment: dict) -> MovementDTO | None:

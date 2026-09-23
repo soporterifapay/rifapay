@@ -84,6 +84,10 @@ def _expiry_tick(expire_fn, match_fn) -> dict:
                 except Exception as exc:
                     stats["errors"] += 1
                     logger.warning("poll %s: %s", conn.organizer_id, exc)
+        try:
+            stats["repaired"] = mp_client.repair_movement_dates(db)
+        except Exception:
+            pass
         stats["expired"] = expire_fn(db)
         stats["matched"] = match_fn(db)
     finally:

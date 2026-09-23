@@ -16,6 +16,14 @@ def test_to_movement_ok():
     assert isinstance(m.date_created, datetime)
 
 
+def test_parse_respeta_offset():
+    # 14:33:53 -04:00 == 18:33:53 UTC. El bug viejo daba 14:33 naive.
+    dt = mp_client.parse_mp_date("2026-09-23T14:33:53.000-04:00")
+    assert (dt.hour, dt.minute) == (18, 33)
+    assert dt.tzinfo is None
+    assert mp_client.parse_mp_date("2026-09-23T18:33:53Z").hour == 18
+
+
 def test_to_movement_descarta_no_aprobado():
     assert mp_client.to_movement(_pay(status="rejected")) is None
 
