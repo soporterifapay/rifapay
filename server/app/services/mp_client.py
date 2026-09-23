@@ -81,7 +81,8 @@ def api_get(access_token: str, path: str, params: dict | None = None) -> dict:
     )
     if resp.status_code == 401:
         raise MpAuthError("unauthorized")
-    resp.raise_for_status()
+    if resp.status_code >= 400:
+        raise Exception(f"MP {resp.status_code} en {path}: {resp.text[:300]}")
     return resp.json()
 
 
@@ -89,14 +90,34 @@ def get_user(access_token: str) -> dict:
     return api_get(access_token, "/users/me")
 
 
-def search_payments(access_token: str, collector_id: str, hours: int = 48) -> list[dict]:
-    begin = (datetime.utcnow() - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    data = api_get(
-        access_token,
-        "/v1/payments/search",
-        {"collector.id": collector_id, "range": "date_created", "begin_date": begin, "sort": "date_created"},
-    )
-    return data.get("results", [])
+def search_payments(access_token: str, hours: int = 48) -> list[dict]:
+    """Trae pagos recientes del vendedor (el token ya limita a su cuenta).
+
+    OJO: /v1/payments/search NO acepta filtro collector.id (da 400).
+    Se trae por rango de fecha con paginación y se filtra en casa.
+    """
+    now = datetime.utcnow()
+    begin = (now - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    end = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    out: list[dict] = []
+    offset = 0
+    for _ in range(5):  # tope de seguridad: 5 x 100
+        data = api_get(access_token, "/v1/payments/search", {
+            "sort": "date_created",
+            "criteria": "desc",
+            "range": "date_created",
+            "begin_date": begin,
+            "end_date": end,
+            "limit": 100,
+            "offset": offset,
+        })
+        results = data.get("results", [])
+        out.extend(results)
+        paging = data.get("paging", {})
+        if len(results) < 100 or offset + len(results) >= int(paging.get("total", 0)):
+            break
+        offset += len(results)
+    return out
 
 
 def get_payment(access_token: str, payment_id: str) -> dict:
@@ -125,12 +146,19 @@ def to_movement(payment: dict) -> MovementDTO | None:
     )
 
 
-def ingest_payments(db, organizer, payments: list[dict]) -> int:
-    """Guarda pagos aprobados no vistos en movements_cache. Devuelve nuevos."""
+def ingest_payments(db, organizer, payments: list[dict], collector_id: str | None = None) -> int:
+    """Guarda pagos aprobados no vistos en movements_cache. Devuelve nuevos.
+
+    Si se pasa collector_id, descarta pagos de otro cobrador (defensa extra,
+    ya que el token normalmente solo ve los propios).
+    """
     from .. import models  # import local para evitar ciclo
 
     new = 0
     for p in payments:
+        if collector_id is not None and "collector_id" in p:
+            if str(p.get("collector_id")) != str(collector_id):
+                continue
         mov = to_movement(p)
         if mov is None:
             continue

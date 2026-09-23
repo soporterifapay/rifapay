@@ -63,8 +63,8 @@ def _expiry_tick(expire_fn, match_fn):
                     org = db.get(models.Organizer, conn.organizer_id)
                     if org is None:
                         continue
-                    payments = mp_client.search_payments(token, conn.mp_user_id)
-                    mp_client.ingest_payments(db, org, payments)
+                    payments = mp_client.search_payments(token)
+                    mp_client.ingest_payments(db, org, payments, collector_id=conn.mp_user_id)
                 except Exception as exc:
                     logger.warning("poll %s: %s", conn.organizer_id, exc)
         expire_fn(db)

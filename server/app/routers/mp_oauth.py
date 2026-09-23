@@ -183,11 +183,11 @@ async def ipn(request: Request, db: Session = Depends(get_db)):
                 payment = mp_client.get_payment(token, payment_id)
             except Exception:
                 continue
-            if str(payment.get("collector_id", "")) != conn.mp_user_id:
+            if "collector_id" in payment and str(payment.get("collector_id")) != conn.mp_user_id:
                 continue
             org = db.get(models.Organizer, conn.organizer_id)
             if org:
-                mp_client.ingest_payments(db, org, [payment])
+                mp_client.ingest_payments(db, org, [payment], collector_id=conn.mp_user_id)
             break
     run_matcher(db)
     return {"ok": True}
