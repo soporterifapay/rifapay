@@ -79,3 +79,9 @@ class OrderOut(BaseModel):
 class MockCreditIn(BaseModel):
     organizer_id: str
     amount: float
+
+
+class PayoutUpdate(BaseModel):
+    cvu: str | None = None
+    alias: str | None = None
+    holder: str | None = None

@@ -98,3 +98,37 @@ def export_csv(raffle_id: str, db: Session = Depends(get_db), org: models.Organi
     for o in orders:
         w.writerow([o.id, json.loads(o.numbers_json), o.amount, o.status, o.buyer_name, o.created_at.isoformat()])
     return PlainTextResponse(buf.getvalue(), media_type="text/csv")
+
+
+@router.patch("/raffles/{raffle_id}/payout")
+def update_payout(raffle_id: str, data: schemas.PayoutUpdate,
+                  db: Session = Depends(get_db), org: models.Organizer = Depends(current_organizer)):
+    """Actualiza los datos de cobro reales (CVU/alias/titular) de una rifa."""
+    r = db.get(models.Raffle, raffle_id)
+    if not r or r.organizer_id != org.id:
+        raise HTTPException(404, "Rifa no existe")
+    if data.cvu is not None:
+        r.cvu = data.cvu
+    if data.alias is not None:
+        r.alias = data.alias
+    if data.holder is not None:
+        r.holder = data.holder
+    db.commit()
+    return {"id": r.id, "cvu": r.cvu, "alias": r.alias, "holder": r.holder}
+
+
+@router.patch("/account/payout")
+def update_account_payout(data: schemas.PayoutUpdate,
+                          db: Session = Depends(get_db), org: models.Organizer = Depends(current_organizer)):
+    """Actualiza los datos de cobro de la conexión (se autocompletan en rifas nuevas)."""
+    conn = db.query(models.MpConnection).filter(models.MpConnection.organizer_id == org.id).first()
+    if not conn:
+        raise HTTPException(404, "Conectá tu cuenta primero")
+    if data.cvu is not None:
+        conn.cvu = data.cvu
+    if data.alias is not None:
+        conn.alias = data.alias
+    if data.holder is not None:
+        conn.holder = data.holder
+    db.commit()
+    return {"cvu": conn.cvu, "alias": conn.alias, "holder": conn.holder}
