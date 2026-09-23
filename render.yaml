@@ -7,11 +7,13 @@ services:
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
-        fromDatabase: { name: rifapay-db, property: connectionString }
+        sync: false  # Supabase pooler URI (servicios manuales, sin Blueprint)
       - key: JWT_SECRET
         generateValue: true
       - key: FERNET_KEY
         generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.12.0"
       - key: MP_MOCK_MODE
         value: "False"
       - key: MP_CLIENT_ID
@@ -19,11 +21,9 @@ services:
       - key: MP_CLIENT_SECRET
         sync: false
       - key: MP_REDIRECT_URI
-        value: "https://rifapay-api.onrender.com/api/mp/callback"
+        value: "https://rifapay-qa-pv5f.onrender.com/api/mp/callback"
       - key: FRONTEND_URL
         value: "https://rifapay-client.onrender.com"
-      - key: PYTHON_VERSION
-        value: "3.12.0"
   - type: web
     name: rifapay-client
     runtime: static
@@ -32,8 +32,9 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: "https://rifapay-api.onrender.com"
+        value: "https://rifapay-qa-pv5f.onrender.com"
 
-databases:
-  - name: rifapay-db
-    plan: free
+# NOTA: deploy actual con servicios manuales (sin Blueprint, sin tarjeta):
+# - rifapay-qa (Web Service Python, root server) + Supabase rifapay-qa como DB.
+# - rifapay-client (Static Site, root client).
+# La seccion databases de abajo solo aplica si se usa Blueprint con tarjeta.
