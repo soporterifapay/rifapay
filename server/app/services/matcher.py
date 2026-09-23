@@ -91,6 +91,7 @@ def run_matcher(db: Session) -> int:
             continue
         mov.used_by_order_id = order.id
         order.status = "paid"
+        db.flush()  # vital con autoflush=False: evita que otra orden use el mismo crédito
         # re-asigna tickets (pueden haberse liberado visualmente pero la orden sigue viva)
         try:
             numbers = json.loads(order.numbers_json)
