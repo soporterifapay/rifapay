@@ -43,9 +43,7 @@ def resend_receipt(data: ResendIn, db: Session = Depends(get_db),
         raise HTTPException(404, "Orden no existe o no está pagada")
     db.query(models.Notification).filter(
         models.Notification.order_id == o.id,
-        models.Notification.kind == "receipt",
-        models.Notification.channel == "email",
-        models.Notification.status == "skipped").delete()
+        models.Notification.kind == "receipt").delete()
     db.commit()
     notifier.notify_paid(db, o)
     row = db.query(models.Notification).filter(
