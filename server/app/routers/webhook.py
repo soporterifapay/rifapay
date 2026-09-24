@@ -1,11 +1,13 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..config import settings
 from ..db import get_db
+from ..deps import current_organizer
 from ..services.matcher import run_matcher
 
 router = APIRouter()
@@ -24,3 +26,53 @@ def mock_credit(data: schemas.MockCreditIn, db: Session = Depends(get_db)):
     db.commit()
     matched = run_matcher(db)
     return {"mp_payment_id": mp_id, "matched": matched}
+
+
+class SmtpTestIn(BaseModel):
+    to: str
+
+
+@router.post("/dev/smtp-test")
+def smtp_test(data: SmtpTestIn, db: Session = Depends(get_db),
+              org: models.Organizer = Depends(current_organizer)):
+    """TEMPORAL: diagnostica SMTP por etapas sin exponer secretos. Se borra despues."""
+    import smtplib
+
+    steps: dict[str, str] = {}
+    if not settings.smtp_host or not settings.smtp_from:
+        return {"error": "SMTP sin configurar (host/from vacios)"}
+    if not settings.smtp_user or not settings.smtp_password:
+        return {"error": "SMTP sin credenciales (user/password vacios)"}
+    try:
+        s = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15)
+        code, _ = s.ehlo()
+        steps["connect_ehlo"] = f"ok {code}"
+    except Exception as exc:
+        return {"error": f"connect: {str(exc)[:300]}", "steps": steps}
+    try:
+        code, _ = s.starttls()
+        steps["starttls"] = f"ok {code}"
+    except Exception as exc:
+        return {"error": f"starttls: {str(exc)[:300]}", "steps": steps}
+    try:
+        code, _ = s.login(settings.smtp_user, settings.smtp_password)
+        steps["login"] = f"ok {code}"
+    except Exception as exc:
+        return {"error": f"login: {str(exc)[:400]}", "steps": steps}
+    try:
+        from email.message import EmailMessage
+        msg = EmailMessage()
+        msg["From"] = settings.smtp_from
+        msg["To"] = data.to
+        msg["Subject"] = "[RifaPay] prueba SMTP"
+        msg.set_content("Prueba de diagnostico, ignorar.")
+        s.send_message(msg)
+        steps["send"] = "ok"
+    except Exception as exc:
+        return {"error": f"send: {str(exc)[:400]}", "steps": steps}
+    finally:
+        try:
+            s.quit()
+        except Exception:
+            pass
+    return {"ok": True, "steps": steps}
