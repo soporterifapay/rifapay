@@ -51,23 +51,23 @@ export default function Checkout() {
 function PaidBox({ order }) {
   const nums = order.numbers.join(', ')
   const lines = [
-    `✅ *Pago confirmado - RifaPay*`,
-    `${order.raffle_title || ''}`,
+    `✅ *PAGO CONFIRMADO*`,
+    `🧾 ${order.raffle_title || ''}`,
     ``,
-    `Hola ${order.buyer_name || ''}, tus números ya participan del sorteo.`,
+    `👋 Hola ${order.buyer_name || ''}, tus números ya participan del sorteo.`,
     ``,
-    `*Tus números*`,
+    `🎟️ *Tus números*`,
     '```' + nums + '```',
     ``,
-    `Monto acreditado: *$ ${order.amount}*`,
-    `Fecha de pago: ${order.paid_at || ''}`,
-    `ID de orden: \`\`\`${order.id}\`\`\``,
+    `💰 Monto acreditado: *$ ${order.amount}*`,
+    `📅 Fecha de pago: ${order.paid_at || ''}`,
+    `🆔 ID de orden: \`\`\`${order.id}\`\`\``,
   ]
-  if (order.draw_date) lines.push(`Fecha del sorteo: ${order.draw_date}`)
-  if (order.dest) lines.push(`Destino: ${order.dest}`)
+  if (order.draw_date) lines.push(`🎰 Fecha del sorteo: ${order.draw_date}`)
+  if (order.dest) lines.push(`📍 Destino: ${order.dest}`)
   lines.push(
     ``,
-    `_Conservá el ID de orden ante cualquier reclamo. Constancia de compra RifaPay. No reemplaza el comprobante de tu banco._`,
+    `⚠️ _Conservá el ID de orden ante cualquier reclamo. Constancia de compra RifaPay. No reemplaza el comprobante de tu banco._`,
   )
   const wa = `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`
   return (
