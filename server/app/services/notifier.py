@@ -48,9 +48,69 @@ def notify_expiry(db: Session, order: models.Order, numbers: list) -> None:
 
 
 def _send_email(to: str, subject: str, body: str, html_body: str | None = None) -> str:
-    if not settings.smtp_host or not settings.smtp_from:
+    if not settings.smtp_from:
         return "skipped"
     if not is_valid_email(to):
+        return "skipped"
+    if settings.google_client_id and settings.google_client_secret and settings.google_refresh_token:
+        return _send_gmail(to, subject, body, html_body)
+    return _send_smtp(to, subject, body, html_body)
+
+
+_gmail_token: dict = {}
+
+
+def _gmail_access_token() -> str:
+    """Access token via refresh (cache en memoria). Lanza si falla."""
+    import time
+
+    import httpx
+
+    if _gmail_token.get("exp", 0) > time.time() + 60:
+        return _gmail_token["token"]
+    r = httpx.post("https://oauth2.googleapis.com/token", data={
+        "client_id": settings.google_client_id,
+        "client_secret": settings.google_client_secret,
+        "refresh_token": settings.google_refresh_token,
+        "grant_type": "refresh_token",
+    }, timeout=15)
+    r.raise_for_status()
+    data = r.json()
+    _gmail_token["token"] = data["access_token"]
+    _gmail_token["exp"] = time.time() + int(data.get("expires_in", 3600))
+    return _gmail_token["token"]
+
+
+def _send_gmail(to: str, subject: str, body: str, html_body: str | None = None) -> str:
+    import base64
+    import logging
+
+    import httpx
+    log = logging.getLogger("rifapay")
+    try:
+        msg = EmailMessage()
+        msg["From"] = settings.smtp_from
+        msg["To"] = to.strip()
+        msg["Subject"] = f"[RifaPay] {subject}"
+        msg.set_content(body)
+        if html_body:
+            msg.add_alternative(html_body, subtype="html")
+        token = _gmail_access_token()
+        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+        r = httpx.post("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                       headers={"Authorization": f"Bearer {token}"},
+                       json={"raw": raw}, timeout=20)
+        if r.status_code in (200, 201):
+            return "sent"
+        log.warning("gmail send %s: %s", r.status_code, r.text[:200])
+        return "skipped"
+    except Exception as exc:
+        log.warning("gmail error: %s", str(exc)[:200])
+        return "skipped"
+
+
+def _send_smtp(to: str, subject: str, body: str, html_body: str | None = None) -> str:
+    if not settings.smtp_host:
         return "skipped"
     try:
         msg = EmailMessage()
