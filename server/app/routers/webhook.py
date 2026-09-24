@@ -76,3 +76,16 @@ def smtp_test(data: SmtpTestIn, db: Session = Depends(get_db),
         except Exception:
             pass
     return {"ok": True, "steps": steps}
+
+
+@router.post("/dev/gmail-test")
+def gmail_test(data: SmtpTestIn, db: Session = Depends(get_db),
+               org: models.Organizer = Depends(current_organizer)):
+    """TEMPORAL: prueba envio por Gmail API. Se borra despues."""
+    from ..services import notifier
+
+    if not (settings.google_client_id and settings.google_client_secret and settings.google_refresh_token):
+        return {"error": "GOOGLE_* sin configurar"}
+    res = notifier._send_gmail(data.to, "prueba Gmail API",
+                               "Prueba de diagnostico RifaPay, ignorar.", None)
+    return {"result": res}
