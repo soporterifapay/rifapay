@@ -104,3 +104,14 @@ def test_rate_limit_ordenes(client, token):
                                              "buyer_dni": f"RL{i:03d}"})
         codes.add(r.status_code)
     assert 429 in codes
+
+
+def test_order_status_trae_datos_comprobante(client, auth_org, db):
+    org, token = auth_org
+    rid = _raffle(client, token)
+    o = client.post("/api/orders", json={"raffle_id": rid, "numbers": [4], "buyer_name": "WA",
+                                         "buyer_email": "wa@ejemplo.com"}).json()
+    client.post("/api/dev/mock-credit", json={"organizer_id": org.id, "amount": o["amount"]})
+    s = client.get(f"/api/orders/{o['id']}").json()
+    assert s["status"] == "paid"
+    assert s["buyer_name"] == "WA" and s["paid_at"] and "dest" in s and "draw_date" in s

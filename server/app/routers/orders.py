@@ -87,11 +87,24 @@ def order_status(order_id: str, db: Session = Depends(get_db)):
         .order_by(models.Notification.created_at.desc())
         .first()
     )
+    paid_at = ""
+    if o.status == "paid":
+        mov = db.query(models.Movement).filter(models.Movement.used_by_order_id == o.id).first()
+        if mov is not None:
+            paid_at = mov.date_created.strftime("%d/%m/%Y %H:%M UTC")
+    draw = ""
+    try:
+        if r is not None and getattr(r, "draw_date", None):
+            draw = r.draw_date.strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        draw = ""
     return {
         "id": o.id, "numbers": json.loads(o.numbers_json), "amount": o.amount, "status": o.status,
         "expires_at": o.expires_at.isoformat(), "cvu": r.cvu, "alias": r.alias, "holder": r.holder,
         "notice": note.message if note else "",
         "raffle_id": r.id, "raffle_title": r.title,
+        "buyer_name": o.buyer_name, "paid_at": paid_at, "draw_date": draw,
+        "dest": (r.alias or r.cvu or ""),
     }
 
 

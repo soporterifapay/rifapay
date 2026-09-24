@@ -49,13 +49,32 @@ export default function Checkout() {
 }
 
 function PaidBox({ order }) {
-  const text = `RifaPay - Pago confirmado\nRifa: ${order.raffle_title || ''}\nNumeros: ${order.numbers.join(', ')}\nMonto: $${order.amount}\nID: ${order.id}`
-  const wa = `https://wa.me/?text=${encodeURIComponent(text)}`
+  const nums = order.numbers.join(', ')
+  const lines = [
+    `✅ *Pago confirmado - RifaPay*`,
+    `${order.raffle_title || ''}`,
+    ``,
+    `Hola ${order.buyer_name || ''}, tus números ya participan del sorteo.`,
+    ``,
+    `*Tus números*`,
+    '```' + nums + '```',
+    ``,
+    `Monto acreditado: *$ ${order.amount}*`,
+    `Fecha de pago: ${order.paid_at || ''}`,
+    `ID de orden: \`\`\`${order.id}\`\`\``,
+  ]
+  if (order.draw_date) lines.push(`Fecha del sorteo: ${order.draw_date}`)
+  if (order.dest) lines.push(`Destino: ${order.dest}`)
+  lines.push(
+    ``,
+    `_Conservá el ID de orden ante cualquier reclamo. Constancia de compra RifaPay. No reemplaza el comprobante de tu banco._`,
+  )
+  const wa = `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`
   return (
     <div className="mt-4 flex flex-col gap-2">
       <p className="text-sm text-emerald-700">Te enviamos el comprobante por email. Guardá el ID ante cualquier reclamo.</p>
       <div className="flex gap-2">
-        <a className="btn" href={wa} target="_blank" rel="noreferrer">Recibir por WhatsApp</a>
+        <a className="btn" href={wa} target="_blank" rel="noreferrer">Recibir comprobante por WhatsApp</a>
         <a className="btn-sec" href={`/rifa/${order.raffle_id}`}>Ver rifa</a>
       </div>
     </div>
