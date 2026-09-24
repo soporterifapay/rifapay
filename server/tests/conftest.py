@@ -10,11 +10,18 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_db.name}"
 import pytest
 from fastapi.testclient import TestClient
 
-from app import models
+from app import models, ratelimit
 from app.db import SessionLocal, engine, Base
 from app.main import app
 
 Base.metadata.create_all(bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def _clear_limits():
+    ratelimit._hits.clear()
+    yield
+    ratelimit._hits.clear()
 
 
 def _mail(prefix="t"):

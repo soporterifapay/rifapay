@@ -2,19 +2,20 @@ import hashlib
 import json
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..config import settings
 from ..db import get_db
+from ..ratelimit import limit_auth, limit_orders, limit_upload
 from ..services.matcher import generate_unique_amount, run_matcher
 
 router = APIRouter()
 
 
-@router.post("/orders", response_model=schemas.OrderOut)
-def create_order(data: schemas.OrderCreate, db: Session = Depends(get_db)):
+@router.post("/orders", response_model=schemas.OrderOut, dependencies=[Depends(limit_orders)])
+def create_order(data: schemas.OrderCreate, request: Request, db: Session = Depends(get_db)):
     raffle = db.get(models.Raffle, data.raffle_id)
     if not raffle or raffle.status != "active":
         raise HTTPException(404, "Rifa no disponible")
@@ -107,8 +108,8 @@ def mark_notified(order_id: str, db: Session = Depends(get_db)):
     return {"status": o.status}
 
 
-@router.post("/orders/{order_id}/receipt")
-def upload_receipt(order_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+@router.post("/orders/{order_id}/receipt", dependencies=[Depends(limit_upload)])
+def upload_receipt(order_id: str, request: Request, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Fase 1: solo guarda hash para duplicados (Fase 2 hará OCR). Nunca da pagado."""
     o = db.get(models.Order, order_id)
     if not o:

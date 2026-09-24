@@ -1,12 +1,31 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
+
+EMAIL_RE = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+
+
+def _check_email(v: str) -> str:
+    import re
+
+    v = (v or "").strip()
+    if "\n" in v or "\r" in v or len(v) > 254:
+        raise PydanticCustomError("email_invalido", "Email inválido")
+    if not re.match(EMAIL_RE, v):
+        raise PydanticCustomError("email_invalido", "Email inválido")
+    return v
 
 
 class OrganizerRegister(BaseModel):
     email: str
     name: str = ""
-    password: str = Field(min_length=6)
+    password: str = Field(min_length=8)
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        return _check_email(v)
 
 
 class OrganizerLogin(BaseModel):
@@ -54,10 +73,15 @@ class OrderCreate(BaseModel):
     raffle_id: str
     numbers: list[int] = Field(min_length=1, max_length=20)
     buyer_name: str = Field(min_length=2)
-    buyer_email: str = ""
+    buyer_email: str
     buyer_phone: str = ""
     buyer_dni: str = ""
     origin_last4: str = ""
+
+    @field_validator("buyer_email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        return _check_email(v)
 
 
 class OrderOut(BaseModel):

@@ -111,6 +111,16 @@ def run_matcher(db: Session) -> int:
             t.status = "sold"
             t.order_id = order.id
         matched += 1
+    paid_ids: list[str] = []
     if matched:
         db.commit()
+        paid_ids = [o.id for o in orders if db.get(models.Order, o.id).status == "paid"]
+    # Comprobante de compra: best-effort DESPUÉS del commit, nunca rompe el paid.
+    if paid_ids:
+        from .notifier import notify_paid
+
+        for oid in paid_ids:
+            o = db.get(models.Order, oid)
+            if o is not None and o.status == "paid":
+                notify_paid(db, o)
     return matched

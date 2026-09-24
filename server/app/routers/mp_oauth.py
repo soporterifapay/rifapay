@@ -47,6 +47,9 @@ def callback(code: str, state: str, db: Session = Depends(get_db)):
         return _callback_mock(state, db)
     if settings.mp_mock_mode or not settings.mp_client_id:
         return RedirectResponse(_front("/dashboard?mp=not_configured"))
+    if not settings.fernet_key:
+        # Sin FERNET_KEY los tokens MP quedarían en texto plano. Exigirla en modo real.
+        return RedirectResponse(_front("/dashboard?mp=error_config"))
     item = _states.pop(state, None)
     if item is None:
         return RedirectResponse(_front("/dashboard?mp=error_state"))

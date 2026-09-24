@@ -43,9 +43,9 @@ export default function RaffleDetail() {
       <form className="card flex flex-col gap-2" onSubmit={submit}>
         <h3 className="font-semibold">Tus números: {sel.join(', ') || '-'}</h3>
         <input className="input" placeholder="Nombre y apellido" value={form.buyer_name} onChange={e => setForm({ ...form, buyer_name: e.target.value })} required />
+        <input className="input" type="email" placeholder="Email (te enviamos el comprobante)" value={form.buyer_email} onChange={e => setForm({ ...form, buyer_email: e.target.value })} required />
         <input className="input" placeholder="Teléfono / WhatsApp" value={form.buyer_phone} onChange={e => setForm({ ...form, buyer_phone: e.target.value })} />
         <input className="input" placeholder="DNI (opcional)" value={form.buyer_dni} onChange={e => setForm({ ...form, buyer_dni: e.target.value })} />
-        <input className="input" placeholder="Email (opcional)" value={form.buyer_email} onChange={e => setForm({ ...form, buyer_email: e.target.value })} />
         <button className="btn" disabled={!sel.length}>Reservar y ver cómo pagar</button>
       </form>
     </div>

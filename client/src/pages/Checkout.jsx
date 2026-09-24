@@ -43,6 +43,21 @@ export default function Checkout() {
           <button className="btn mt-3" onClick={() => api.post(`/api/orders/${id}/notified`).then(load)}>Ya transferí, avisar</button>
         </>
       )}
+      {paid && <PaidBox order={order} />}
+    </div>
+  )
+}
+
+function PaidBox({ order }) {
+  const text = `RifaPay - Pago confirmado\nRifa: ${order.raffle_title || ''}\nNumeros: ${order.numbers.join(', ')}\nMonto: $${order.amount}\nID: ${order.id}`
+  const wa = `https://wa.me/?text=${encodeURIComponent(text)}`
+  return (
+    <div className="mt-4 flex flex-col gap-2">
+      <p className="text-sm text-emerald-700">Te enviamos el comprobante por email. Guardá el ID ante cualquier reclamo.</p>
+      <div className="flex gap-2">
+        <a className="btn" href={wa} target="_blank" rel="noreferrer">Recibir por WhatsApp</a>
+        <a className="btn-sec" href={`/rifa/${order.raffle_id}`}>Ver rifa</a>
+      </div>
     </div>
   )
 }

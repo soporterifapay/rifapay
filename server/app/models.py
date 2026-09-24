@@ -106,6 +106,7 @@ class Notification(Base):
     __tablename__ = "notifications"
     id: Mapped[str] = mapped_column(String(12), primary_key=True, default=_uid)
     order_id: Mapped[str] = mapped_column(String(12), ForeignKey("orders.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(16), default="expiry", index=True)  # expiry|receipt
     channel: Mapped[str] = mapped_column(String(16), default="onscreen")  # onscreen|email
     recipient: Mapped[str] = mapped_column(String(255), default="")
     message: Mapped[str] = mapped_column(Text, default="")

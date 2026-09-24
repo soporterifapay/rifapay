@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..db import get_db
 from ..deps import current_organizer
+from ..ratelimit import limit_auth
 from ..security import create_access_token, hash_password, verify_password
 
 router = APIRouter()
 
 
-@router.post("/auth/register", response_model=schemas.TokenOut)
-def register(data: schemas.OrganizerRegister, db: Session = Depends(get_db)):
+@router.post("/auth/register", response_model=schemas.TokenOut, dependencies=[Depends(limit_auth)])
+def register(data: schemas.OrganizerRegister, request: Request, db: Session = Depends(get_db)):
     if db.query(models.Organizer).filter(models.Organizer.email == data.email).first():
         raise HTTPException(400, "Email ya registrado")
     org = models.Organizer(email=data.email, name=data.name, password_hash=hash_password(data.password))
@@ -20,8 +21,8 @@ def register(data: schemas.OrganizerRegister, db: Session = Depends(get_db)):
     return {"access_token": create_access_token(org.id)}
 
 
-@router.post("/auth/login", response_model=schemas.TokenOut)
-def login(data: schemas.OrganizerLogin, db: Session = Depends(get_db)):
+@router.post("/auth/login", response_model=schemas.TokenOut, dependencies=[Depends(limit_auth)])
+def login(data: schemas.OrganizerLogin, request: Request, db: Session = Depends(get_db)):
     org = db.query(models.Organizer).filter(models.Organizer.email == data.email).first()
     if not org or not verify_password(data.password, org.password_hash):
         raise HTTPException(401, "Credenciales inválidas")
