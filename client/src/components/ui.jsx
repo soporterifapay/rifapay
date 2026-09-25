@@ -108,17 +108,63 @@ export function TicketGrid({ tickets, selected, onToggle }) {
 }
 
 export function WhatsButton() {
+  const [open, setOpen] = useState(false)
+  const [nombre, setNombre] = useState('')
+  const [mensaje, setMensaje] = useState('')
+  const [error, setError] = useState('')
+  const toast = useToast()
   const num = '5492615362993'
-  const text = encodeURIComponent('Hola, tengo una consulta sobre las rifas de RifaPay.')
+
+  const enviar = () => {
+    if (!nombre.trim() || !mensaje.trim()) {
+      setError('Completá todos los campos')
+      return
+    }
+    const texto = `Hola RifaPay, soy ${nombre.trim()}. ${mensaje.trim()}`
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(texto)}`, '_blank')
+    setOpen(false)
+    setNombre('')
+    setMensaje('')
+    setError('')
+  }
+
   return (
-    <a href={`https://wa.me/${num}?text=${text}`} target="_blank" rel="noreferrer"
-      aria-label="Consultar por WhatsApp"
-      className="fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full shadow-card flex items-center justify-center hover:scale-105 transition-transform"
-      style={{ backgroundColor: '#25D366' }}>
-      <svg viewBox="0 0 32 32" className="w-7 h-7 fill-white" aria-hidden="true">
-        <path d="M16 3C9.4 3 4 8.4 4 15c0 2.4.7 4.6 2 6.5L4 29l7.7-2c1.8 1 3.9 1.5 4.3 1.5 6.6 0 12-5.4 12-12S22.6 3 16 3zm0 21.8c-1.4 0-2.8-.4-4-1.1l-.3-.2-4.6 1.2 1.2-4.4-.2-.3c-.8-1.3-1.2-2.7-1.2-4.2 0-4.9 4-8.8 8.9-8.8s8.9 4 8.9 8.9-4 8.9-8.7 8.9zm4.9-6.7c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2-1.3-.7-.7-1.2-1.5-1.4-1.7-.1-.2 0-.4.1-.5l.8-.9c.2-.2.2-.4.1-.6l-.8-2c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.2-.7.6-.2.5-.9 2.2-.9 2.2s-.7 1.6.1 3.2c.8 1.7 2.3 3 2.6 3.2.3.2 2.1 1.4 4.5.6.6-.2 1.7-.7 1.9-1.4.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3z" />
-      </svg>
-    </a>
+    <>
+      {open && (
+        <div className="fixed bottom-24 right-4 sm:right-6 z-50 w-[min(92vw,21rem)]" role="dialog" aria-modal="true" aria-label="Chat de ayuda por WhatsApp">
+          <div className="card !p-0 overflow-hidden">
+            <div className="flex justify-between items-center px-5 py-4 text-white" style={{ background: 'linear-gradient(135deg, #25d366, #128c7e)' }}>
+              <h4 className="font-bold">💬 RifaPay Soporte</h4>
+              <button className="text-xl leading-none opacity-80 hover:opacity-100" onClick={() => setOpen(false)} aria-label="Cerrar chat">×</button>
+            </div>
+            <div className="p-5">
+              <p className="text-sm text-slate-600 bg-slate-100 rounded-xl rounded-tl-sm px-4 py-3 mb-4">
+                Hola! Bienvenido a <strong className="text-brand-700">RifaPay</strong>. ¿En qué podemos ayudarte?
+              </p>
+              <label className="text-xs font-semibold text-slate-500">Tu nombre *
+                <input className="input mt-1" maxLength={80} value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Cómo te llamás" />
+              </label>
+              <label className="text-xs font-semibold text-slate-500 mt-2 block">Mensaje *
+                <textarea className="input mt-1" rows={3} maxLength={500} value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="¿En qué podemos ayudarte?" />
+              </label>
+              {error && <p className="text-sm text-red-600 mt-2" role="alert">{error}</p>}
+              <button className="btn w-full mt-3 !bg-[#25d366] hover:!bg-[#128c7e]" onClick={enviar}>Enviar por WhatsApp</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <button onClick={() => { setOpen(o => !o); setError('') }}
+        aria-label="Abrir chat de ayuda por WhatsApp"
+        className="wa-pulse fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 w-[52px] h-[52px] sm:w-[60px] sm:h-[60px] rounded-full flex items-center justify-center hover:scale-105 transition-transform group"
+        style={{ backgroundColor: '#25D366', boxShadow: '0 4px 15px rgba(37, 211, 102, 0.4)' }}>
+        <span className="hidden sm:block absolute right-[70px] top-1/2 -translate-y-1/2 bg-white text-slate-700 px-3 py-1.5 rounded-lg text-[13px] font-semibold whitespace-nowrap shadow-card opacity-0 pointer-events-none group-hover:opacity-100 group-hover:-translate-x-1 transition-all">
+          ¿Necesitás ayuda? Chateá con nosotros
+        </span>
+        <svg viewBox="0 0 24 24" className="w-[26px] h-[26px] sm:w-8 sm:h-8 fill-white relative z-[2]" aria-hidden="true">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+        </svg>
+      </button>
+    </>
   )
 }
 
