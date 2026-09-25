@@ -53,6 +53,7 @@ class RaffleCreate(BaseModel):
 class RaffleOut(BaseModel):
     id: str
     title: str
+    description: str = ""
     total_numbers: int
     price: float
     prizes: str
@@ -61,6 +62,7 @@ class RaffleOut(BaseModel):
     reserved_count: int = 0
     requested: bool = False
     rejection_reason: str = ""
+    draw_date: datetime | None = None
 
     class Config:
         from_attributes = True

@@ -67,8 +67,10 @@ def create_raffle(
     db.commit()
     db.refresh(raffle)
     return schemas.RaffleOut(
-        id=raffle.id, title=raffle.title, total_numbers=raffle.total_numbers, price=raffle.price,
+        id=raffle.id, title=raffle.title, description=raffle.description,
+        total_numbers=raffle.total_numbers, price=raffle.price,
         prizes=raffle.prizes, status=raffle.status, sold_count=0, reserved_count=0,
+        draw_date=raffle.draw_date,
     )
 
 
@@ -79,9 +81,10 @@ def my_raffles(db: Session = Depends(get_db), org: models.Organizer = Depends(cu
         sold = db.query(models.Ticket).filter(models.Ticket.raffle_id == r.id, models.Ticket.status == "sold").count()
         res = db.query(models.Ticket).filter(models.Ticket.raffle_id == r.id, models.Ticket.status == "reserved").count()
         out.append(schemas.RaffleOut(
-            id=r.id, title=r.title, total_numbers=r.total_numbers, price=r.price,
-            prizes=r.prizes, status=r.status, sold_count=sold, reserved_count=res,
-            requested=r.publish_requested_at is not None, rejection_reason=r.rejection_reason or ""))
+            id=r.id, title=r.title, description=r.description, total_numbers=r.total_numbers,
+            price=r.price, prizes=r.prizes, status=r.status, sold_count=sold, reserved_count=res,
+            requested=r.publish_requested_at is not None, rejection_reason=r.rejection_reason or "",
+            draw_date=r.draw_date))
     return out
 
 

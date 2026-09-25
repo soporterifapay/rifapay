@@ -124,3 +124,39 @@ def test_order_status_trae_datos_comprobante(client, auth_org, db):
     s = client.get(f"/api/orders/{o['id']}").json()
     assert s["status"] == "paid"
     assert s["buyer_name"] == "WA" and s["paid_at"] and "dest" in s and "draw_date" in s
+
+
+def test_recent_sin_pii_y_solo_active(client, auth_org, db):
+    org, token = auth_org
+    rid = _raffle(client, token)
+    assert client.get(f"/api/raffles/{rid}/recent").json() == []
+    o = client.post("/api/orders", json={"raffle_id": rid, "numbers": [2], "buyer_name": "Pub",
+                                         "buyer_email": "pub@ejemplo.com"}).json()
+    client.post("/api/dev/mock-credit", json={"organizer_id": org.id, "amount": o["amount"]})
+    rec = client.get(f"/api/raffles/{rid}/recent").json()
+    assert len(rec) == 1 and rec[0]["numbers"] == [2] and rec[0]["ago"].startswith("hace")
+    flat = " ".join(str(v) for r in rec for v in r.values())
+    assert "pub@ejemplo.com" not in flat and "Pub" not in flat.replace("hace", "")
+    # limite acotado
+    assert client.get(f"/api/raffles/{rid}/recent?limit=500").json() == rec
+    # rifa inexistente
+    assert client.get("/api/raffles/xxxx/recent").status_code == 404
+
+
+def test_listado_trae_draw_y_description(client, auth_org):
+    org, token = auth_org
+    H = {"Authorization": f"Bearer {token}"}
+    r = client.post("/api/organizer/raffles", headers=H,
+                    json={"title": "R", "total_numbers": 5, "price": 1000.0,
+                          "draw_date": "2026-12-01T20:00:00"})
+    rid = r.json()["id"]
+    data = client.get("/api/raffles").json()
+    assert all(x["id"] != rid for x in data)  # pending no lista
+    from app.db import SessionLocal
+    from app import models as _m
+    db = SessionLocal()
+    db.query(_m.Raffle).filter_by(id=rid).update({"status": "active"})
+    db.commit()
+    db.close()
+    data = client.get("/api/raffles").json()
+    assert data and "draw_date" in data[0] and "description" in data[0]

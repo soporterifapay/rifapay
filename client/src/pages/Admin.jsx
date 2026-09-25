@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client.js'
+import { ConfirmModal, StatusBadge, fmtMoney, useToast } from '../components/ui.jsx'
 
 const ESTADOS = { pending: 'Pendiente', active: 'Activa', paused: 'Pausada', closed: 'Cerrada', rejected: 'Rechazada' }
 
@@ -8,6 +9,10 @@ export default function Admin() {
   const [filtro, setFiltro] = useState('')
   const [edit, setEdit] = useState(null)
   const [denied, setDenied] = useState(false)
+  const [confirm, setConfirm] = useState(null)
+  const [rejectFor, setRejectFor] = useState(null)
+  const [reason, setReason] = useState('')
+  const toast = useToast()
 
   useEffect(() => {
     api.get('/api/organizer/me').then(r => {
@@ -21,7 +26,9 @@ export default function Admin() {
     .then(r => setItems(r.data)).catch(() => {})
   useEffect(load, [filtro])
 
-  const act = (fn) => fn.then(load).catch(e => alert(e.response?.data?.detail || 'Error'))
+  const act = (fn, okMsg) => fn
+    .then(() => { if (okMsg) toast(okMsg, 'ok'); load() })
+    .catch(e => toast(typeof e.response?.data?.detail === 'string' ? e.response.data.detail : 'Error', 'error'))
 
   return (
     <div className="grid gap-4">
@@ -37,30 +44,25 @@ export default function Admin() {
         <div key={r.id} className="card">
           <div className="flex justify-between flex-wrap gap-2">
             <div>
-              <h3 className="font-semibold">{r.title} <span className="text-sm text-slate-500">({ESTADOS[r.status] || r.status})</span></h3>
-              <p className="text-sm text-slate-600">{r.owner_email} · ${r.price} · {r.sold}/{r.total_numbers} vendidos
+              <h3 className="font-semibold">{r.title} <StatusBadge status={r.status} /></h3>
+              <p className="text-sm text-slate-600">{r.owner_email} · {fmtMoney(r.price)} · {r.sold}/{r.total_numbers} vendidos
                 {r.requested && r.status === 'pending' ? ' · 📩 solicitó publicación' : ''}</p>
               {r.status === 'rejected' && r.rejection_reason && (
                 <p className="text-sm text-red-600">Motivo: {r.rejection_reason}</p>)}
             </div>
             <div className="flex gap-2 flex-wrap">
               {(r.status === 'pending' || r.status === 'rejected') && (
-                <button className="btn" onClick={() => act(api.post(`/api/admin/raffles/${r.id}/approve`))}>Aprobar</button>)}
+                <button className="btn" onClick={() => act(api.post(`/api/admin/raffles/${r.id}/approve`), 'Rifa aprobada y publicada')}>Aprobar</button>)}
               {r.status === 'pending' && (
-                <button className="btn-sec" onClick={() => {
-                  const m = prompt('Motivo del rechazo:')
-                  if (m) act(api.post(`/api/admin/raffles/${r.id}/reject`, { reason: m }))
-                }}>Rechazar</button>)}
+                <button className="btn-sec" onClick={() => { setRejectFor(r); setReason('') }}>Rechazar</button>)}
               {r.status === 'active' && (
-                <button className="btn-sec" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'paused' }))}>Pausar</button>)}
+                <button className="btn-sec" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'paused' }), 'Rifa pausada')}>Pausar</button>)}
               {r.status === 'paused' && (
-                <button className="btn" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'active' }))}>Reanudar</button>)}
+                <button className="btn" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'active' }), 'Rifa reanudada')}>Reanudar</button>)}
               {(r.status === 'active' || r.status === 'paused') && (
-                <button className="btn-sec" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'closed' }))}>Cerrar</button>)}
+                <button className="btn-sec" onClick={() => setConfirm({ id: r.id, title: r.title, action: 'closed', label: 'Cerrar', body: 'No aceptará más reservas. El historial se conserva.' })}>Cerrar</button>)}
               <button className="btn-sec" onClick={() => setEdit(edit?.id === r.id ? null : r)}>Editar</button>
-              <button className="btn-sec" onClick={() => {
-                if (confirm('¿Eliminar rifa? Solo si no tiene ventas.')) act(api.delete(`/api/admin/raffles/${r.id}`))
-              }}>Eliminar</button>
+              <button className="btn-sec" onClick={() => setConfirm({ id: r.id, title: r.title, action: 'delete', label: 'Eliminar', body: 'Solo si no tiene ventas. Esta acción no se puede deshacer.' })}>Eliminar</button>
             </div>
           </div>
           {edit?.id === r.id && <EditForm r={r} done={() => { setEdit(null); load() }} />}
@@ -68,11 +70,42 @@ export default function Admin() {
         </div>
       ))}
       {!items.length && <div className="card">Sin rifas con ese filtro.</div>}
+      <ConfirmModal open={!!confirm} title={`${confirm?.label}: ${confirm?.title}`} body={confirm?.body}
+        confirmLabel={confirm?.label}
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const c = confirm
+          setConfirm(null)
+          if (!c) return
+          if (c.action === 'delete') act(api.delete(`/api/admin/raffles/${c.id}`), 'Rifa eliminada')
+          else act(api.patch(`/api/admin/raffles/${c.id}`, { status: c.action }), 'Listo')
+        }} />
+      {rejectFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Motivo del rechazo">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setRejectFor(null)} />
+          <form className="card relative max-w-sm w-full flex flex-col gap-2" onSubmit={(e) => {
+            e.preventDefault()
+            const r = rejectFor
+            setRejectFor(null)
+            act(api.post(`/api/admin/raffles/${r.id}/reject`, { reason }), 'Rifa rechazada')
+          }}>
+            <h3 className="font-semibold">Rechazar: {rejectFor.title}</h3>
+            <label className="text-sm">Motivo (lo ve el organizador)
+              <input className="input mt-1" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} required />
+            </label>
+            <div className="flex gap-2 justify-end">
+              <button type="button" className="btn-sec" onClick={() => setRejectFor(null)}>Cancelar</button>
+              <button className="btn-danger">Rechazar</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
 
 function EditForm({ r, done }) {
+  const toast = useToast()
   const [f, setF] = useState({ title: r.title, price: r.price, prizes: '', draw_date: '', cvu: '', alias: '', holder: '' })
   return (
     <form className="grid gap-2 mt-3 p-3 bg-slate-50 rounded-xl" onSubmit={async (e) => {
@@ -82,7 +115,7 @@ function EditForm({ r, done }) {
       try {
         await api.patch(`/api/admin/raffles/${r.id}`, body)
         done()
-      } catch (err) { alert(err.response?.data?.detail || 'Error') }
+      } catch (err) { toast(typeof err.response?.data?.detail === 'string' ? err.response.data.detail : 'Error', 'error') }
     }}>
       <p className="text-sm font-medium">Editar (admin puede todo; cantidad de números no se cambia)</p>
       <input className="input" placeholder="Título" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} />
@@ -115,9 +148,9 @@ function AdminOrders({ raffleId }) {
         <option value="observed">Observadas</option>
       </select>
       {orders.map(o => (
-        <div key={o.id} className="flex justify-between border-b py-1">
-          <span>N° {o.numbers.join(',')} - {o.buyer} ({o.email}) - ${o.amount}</span>
-          <b>{o.status === 'paid' ? '✓ Pagado' : o.status}</b>
+        <div key={o.id} className="flex justify-between gap-2 flex-wrap border-b py-1">
+          <span>N° {o.numbers.join(',')} - {o.buyer} ({o.email}) - {fmtMoney(o.amount)}</span>
+          <StatusBadge status={o.status} />
         </div>
       ))}
     </div>

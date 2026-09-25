@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../api/client.js'
+import { ProgressBar, WhatsButton, fmtMoney } from '../components/ui.jsx'
 
 export default function Home() {
   const [items, setItems] = useState(null)
@@ -29,12 +30,15 @@ export default function Home() {
       {items.map(r => (
         <div key={r.id} className="card">
           <h2 className="text-xl font-semibold">{r.title}</h2>
+          {r.description && <p className="text-sm text-slate-600 mt-1">{r.description}</p>}
           <p className="text-sm text-slate-600">{r.prizes}</p>
-          <p className="mt-2">Precio por número: <b>${r.price}</b></p>
-          <p className="text-sm">Vendidos: {r.sold_count} / {r.total_numbers}</p>
+          {r.draw_date && <p className="text-sm mt-1">🎰 Sorteo: {new Date(r.draw_date).toLocaleString('es-AR')}</p>}
+          <p className="mt-2">Precio por número: <b>{fmtMoney(r.price)}</b></p>
+          <div className="mt-2"><ProgressBar sold={r.sold_count} total={r.total_numbers} /></div>
           <Link className="btn mt-3 inline-block" to={`/rifa/${r.id}`}>Elegir números</Link>
         </div>
       ))}
+      <WhatsButton />
     </div>
   )
 }

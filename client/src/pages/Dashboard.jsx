@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client.js'
+import { StatusBadge, fmtMoney, useToast } from '../components/ui.jsx'
 
 export default function Dashboard() {
   const [raffles, setRaffles] = useState([])
@@ -18,14 +19,19 @@ export default function Dashboard() {
 
   const [form, setForm] = useState({ cvu: '', alias: '', holder: '' })
   const [saved, setSaved] = useState('')
+  const toast = useToast()
 
   const savePayout = async (e) => {
     e.preventDefault()
-    await api.patch('/api/organizer/account/payout', form)
-    setSaved('Guardado ✓')
-    setForm({ cvu: '', alias: '', holder: '' })
-    load()
-    setTimeout(() => setSaved(''), 3000)
+    try {
+      await api.patch('/api/organizer/account/payout', form)
+      setSaved('Guardado ✓')
+      setForm({ cvu: '', alias: '', holder: '' })
+      load()
+      setTimeout(() => setSaved(''), 3000)
+    } catch {
+      toast('No se pudo guardar', 'error')
+    }
   }
 
   return (
@@ -117,9 +123,9 @@ function RaffleRow({ r, reload }) {
       {msg && <p className="text-sm mt-2">{msg}</p>}
       <div className="mt-2 text-sm">
         {orders.map(o => (
-          <div key={o.id} className="flex justify-between border-b py-1">
-            <span>N° {o.numbers.join(',')} - {o.buyer} - ${o.amount}</span>
-            <b>{o.status === 'paid' ? '✓ Pagado' : o.status}</b>
+          <div key={o.id} className="flex justify-between gap-2 flex-wrap border-b py-1">
+            <span>N° {o.numbers.join(',')} - {o.buyer} - {fmtMoney(o.amount)}</span>
+            <StatusBadge status={o.status} />
           </div>
         ))}
       </div>
