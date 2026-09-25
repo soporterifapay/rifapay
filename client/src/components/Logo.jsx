@@ -31,7 +31,7 @@ export function LogoMark({ variant = 'drum', size = 36 }) {
   )
 }
 
-export function Logo({ variant = 'drum' }) {
+export function Logo({ variant = 'ticket' }) {
   return (
     <span className="inline-flex items-center gap-2">
       <LogoMark variant={variant} size={36} />

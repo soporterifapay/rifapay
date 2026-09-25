@@ -40,7 +40,7 @@ export default function Checkout() {
       <p className="mt-2"><StatusBadge status={order.status} /> Números: <b>{order.numbers.join(', ')}</b></p>
       {!paid && <div className="mt-2"><Countdown to={order.expires_at} prefix="Tu reserva vence en" /></div>}
       <div className="bg-slate-100 rounded-xl p-4 mt-3">
-        <p>Monto exacto: <b className="text-lg">{fmtMoney(order.amount)}</b></p>
+        <p>Monto exacto: <b className="text-lg tnum">{fmtMoney(order.amount)}</b></p>
         <p className="text-sm text-red-600">Tiene que ser exacto con centavos, sino no se confirma solo.</p>
         {order.cvu && <p className="mt-2">CVU: <b>{order.cvu}</b></p>}
         {order.alias && <p>Alias: <b>{order.alias}</b></p>}

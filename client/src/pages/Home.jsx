@@ -33,7 +33,7 @@ export default function Home() {
           {r.description && <p className="text-sm text-slate-600 mt-1">{r.description}</p>}
           <p className="text-sm text-slate-600">{r.prizes}</p>
           {r.draw_date && <p className="text-sm mt-1">🎰 Sorteo: {new Date(r.draw_date).toLocaleString('es-AR')}</p>}
-          <p className="mt-2">Precio por número: <b>{fmtMoney(r.price)}</b></p>
+          <p className="mt-2">Precio por número: <b className="tnum">{fmtMoney(r.price)}</b></p>
           <div className="mt-2"><ProgressBar sold={r.sold_count} total={r.total_numbers} /></div>
           <Link className="btn mt-3 inline-block" to={`/rifa/${r.id}`}>Elegir números</Link>
         </div>
