@@ -17,6 +17,7 @@ class Organizer(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(255), default="")
     password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(16), default="organizer", index=True)  # organizer|admin
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -48,7 +49,10 @@ class Raffle(Base):
     alias: Mapped[str] = mapped_column(String(64), default="")
     holder: Mapped[str] = mapped_column(String(255), default="")
     verification_mode: Mapped[str] = mapped_column(String(32), default="auto_mp")  # auto_mp|manual
-    status: Mapped[str] = mapped_column(String(32), default="active")  # active|paused|closed
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    # pending|active|paused|closed|rejected — nace pending, solo admin publica
+    rejection_reason: Mapped[str] = mapped_column(Text, default="")
+    publish_requested_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     tickets: Mapped[list["Ticket"]] = relationship(back_populates="raffle", cascade="all, delete-orphan")
 

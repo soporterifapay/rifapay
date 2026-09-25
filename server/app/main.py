@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db import Base, SessionLocal, engine
-from .routers import mp_oauth, orders, organizers, public, webhook
+from .routers import admin, mp_oauth, orders, organizers, public, webhook
 
 # Modelos para Alembic/autocreate en dev (en prod usar alembic upgrade head)
 from . import models  # noqa: F401
@@ -103,5 +103,6 @@ def health():
 app.include_router(public.router, prefix="/api", tags=["public"])
 app.include_router(orders.router, prefix="/api", tags=["orders"])
 app.include_router(organizers.router, prefix="/api/organizer", tags=["organizer"])
+app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(mp_oauth.router, prefix="/api", tags=["mp"])
 app.include_router(webhook.router, prefix="/api", tags=["webhook"])

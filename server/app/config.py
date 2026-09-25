@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     jwt_secret: str = "cambiar-en-produccion"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24
+    admin_emails: str = ""  # separados por coma; reciben rol admin al login/register. Nunca en codigo.
+
+    def admin_email_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.admin_emails.split(",") if e.strip()]
     fernet_key: str = ""
     mp_client_id: str = ""
     mp_client_secret: str = ""

@@ -50,24 +50,71 @@ export default function Dashboard() {
         )}
         <p className="text-xs text-slate-500 mt-2">Solo miramos si entra plata para confirmar números. No movemos plata.</p>
       </div>
-      {raffles.map(r => <RaffleRow key={r.id} r={r} />)}
-      {!raffles.length && <div className="card">Todavía no creaste rifas. La demo se crea con el seed.</div>}
+      {raffles.map(r => <RaffleRow key={r.id} r={r} reload={load} />)}
+      {!raffles.length && <div className="card">Todavía no creaste rifas. Creá la primera abajo.</div>}
+      <CreateRaffle done={load} />
     </div>
   )
 }
 
-function RaffleRow({ r }) {
+const CARTEL = 'Para publicar tu rifa debés abonar el servicio de RifaPay. Envía Solicitar autorización y te contactamos para activarla.'
+const ESTADOS = { pending: 'Pendiente de autorización', active: 'Activa', paused: 'Pausada', closed: 'Cerrada', rejected: 'Rechazada' }
+
+function CreateRaffle({ done }) {
+  const [f, setF] = useState({ title: '', total_numbers: 100, price: '', prizes: '', draw_date: '' })
+  return (
+    <form className="card flex flex-col gap-2" onSubmit={async (e) => {
+      e.preventDefault()
+      try {
+        await api.post('/api/organizer/raffles', {
+          title: f.title, total_numbers: Number(f.total_numbers), price: Number(f.price),
+          prizes: f.prizes, draw_date: f.draw_date ? new Date(f.draw_date).toISOString() : null,
+        })
+        setF({ title: '', total_numbers: 100, price: '', prizes: '', draw_date: '' })
+        done()
+      } catch (err) { alert(err.response?.data?.detail || 'Error al crear') }
+    }}>
+      <h3 className="font-semibold">Crear rifa (queda pendiente hasta que el admin la autorice)</h3>
+      <input className="input" placeholder="Título" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} required />
+      <input className="input" type="number" min="1" max="10000" placeholder="Cantidad de números" value={f.total_numbers} onChange={e => setF({ ...f, total_numbers: e.target.value })} required />
+      <input className="input" type="number" step="0.01" min="0.01" placeholder="Precio por número" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} required />
+      <input className="input" placeholder="Premios" value={f.prizes} onChange={e => setF({ ...f, prizes: e.target.value })} />
+      <input className="input" type="datetime-local" value={f.draw_date} onChange={e => setF({ ...f, draw_date: e.target.value })} required />
+      <button className="btn">Crear rifa</button>
+    </form>
+  )
+}
+
+function RaffleRow({ r, reload }) {
   const [orders, setOrders] = useState([])
+  const [msg, setMsg] = useState('')
   useEffect(() => {
     const t = localStorage.getItem('token')
     if (!t) return
-    import('../api/client.js').then(({ default: api }) =>
-      api.get(`/api/organizer/raffles/${r.id}/orders`).then(res => setOrders(res.data)).catch(() => {}))
+    api.get(`/api/organizer/raffles/${r.id}/orders`).then(res => setOrders(res.data)).catch(() => {})
   }, [r.id])
+  const solicitar = async () => {
+    try {
+      const { data } = await api.post(`/api/organizer/raffles/${r.id}/request-publication`)
+      setMsg(data.message)
+      reload()
+    } catch (err) { setMsg(err.response?.data?.detail || 'Error') }
+  }
   return (
     <div className="card">
-      <h3 className="font-semibold">{r.title} - ${r.price}</h3>
+      <h3 className="font-semibold">{r.title} - ${r.price} <span className="text-sm text-slate-500">({ESTADOS[r.status] || r.status})</span></h3>
       <p className="text-sm">Vendidos {r.sold_count} | Reservados {r.reserved_count} / {r.total_numbers}</p>
+      {r.status === 'pending' && !r.requested && (
+        <div className="mt-2 p-3 bg-amber-50 rounded-xl">
+          <p className="text-sm">{CARTEL}</p>
+          <button className="btn mt-2" onClick={solicitar}>Solicitar autorización para publicar la Rifa</button>
+        </div>
+      )}
+      {r.status === 'pending' && r.requested && (
+        <p className="text-sm mt-2 text-amber-700">⏳ Solicitud enviada. Te contactamos para activarla.</p>)}
+      {r.status === 'rejected' && (
+        <p className="text-sm mt-2 text-red-600">Rechazada: {r.rejection_reason}</p>)}
+      {msg && <p className="text-sm mt-2">{msg}</p>}
       <div className="mt-2 text-sm">
         {orders.map(o => (
           <div key={o.id} className="flex justify-between border-b py-1">

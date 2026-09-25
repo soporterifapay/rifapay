@@ -44,7 +44,7 @@ class RaffleCreate(BaseModel):
     total_numbers: int = Field(default=100, ge=1, le=10000)
     price: float = Field(gt=0)
     prizes: str = ""
-    draw_date: datetime | None = None
+    draw_date: datetime
     cvu: str = ""
     alias: str = ""
     holder: str = ""
@@ -59,6 +59,8 @@ class RaffleOut(BaseModel):
     status: str
     sold_count: int = 0
     reserved_count: int = 0
+    requested: bool = False
+    rejection_reason: str = ""
 
     class Config:
         from_attributes = True
@@ -109,3 +111,20 @@ class PayoutUpdate(BaseModel):
     cvu: str | None = None
     alias: str | None = None
     holder: str | None = None
+
+
+class RejectIn(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class RaffleAdminUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    price: float | None = Field(default=None, gt=0)
+    total_numbers: int | None = Field(default=None, ge=1, le=10000)
+    prizes: str | None = None
+    draw_date: datetime | None = None
+    cvu: str | None = None
+    alias: str | None = None
+    holder: str | None = None
+    status: str | None = None

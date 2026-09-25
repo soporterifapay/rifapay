@@ -24,6 +24,7 @@ def main():
                 total_numbers=100, price=5000.0, prizes="1° TV 55\" - 2° $50.000",
                 draw_date=datetime.utcnow() + timedelta(days=30),
                 cvu="0000003100012345678901", alias="RIFA.PAGO.MOCK", holder="Organizador Demo",
+                status="active",  # seed demo ya aprobada
             )
             db.add(raffle)
             db.flush()

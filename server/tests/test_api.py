@@ -19,9 +19,18 @@ def test_sin_token_no_entra(client):
 
 def _raffle(client, token):
     r = client.post("/api/organizer/raffles", headers={"Authorization": f"Bearer {token}"},
-                    json={"title": "R", "total_numbers": 5, "price": 1000.0})
+                    json={"title": "R", "total_numbers": 5, "price": 1000.0,
+                          "draw_date": "2026-12-01T20:00:00"})
     assert r.status_code == 200, r.text
-    return r.json()["id"]
+    rid = r.json()["id"]
+    # las rifas nacen pending; en estos tests se aprueban directo en DB
+    from app.db import SessionLocal
+    from app import models as _m
+    db = SessionLocal()
+    db.query(_m.Raffle).filter_by(id=rid).update({"status": "active"})
+    db.commit()
+    db.close()
+    return rid
 
 
 def test_reserva_doble_mismo_numero_da_409(client, token):
