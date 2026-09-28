@@ -1,0 +1,19 @@
+name: keep-alive-qa
+
+# Mantiene despierta la API free de Render (duerme a los ~15 min sin trafico)
+# y con actividad el proyecto Supabase. Cada 12 min deja ~3 min de colchon
+# ante demoras de cola de GitHub. Solo lee /api/health (publico, sin secretos).
+on:
+  schedule:
+    - cron: '*/12 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping API health
+        run: |
+          curl -fsS --max-time 60 https://rifapay-qa-pv5f.onrender.com/api/health
+          echo "keep-alive ok"
