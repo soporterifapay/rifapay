@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client.js'
+import { Logo } from '../components/Logo.jsx'
 import { NavButton, ProgressBar, WhatsButton, fmtMoney } from '../components/ui.jsx'
 
 export default function Home() {
@@ -11,6 +12,37 @@ export default function Home() {
       .finally(() => clearTimeout(t))
     return () => clearTimeout(t)
   }, [])
+  const scrollToList = () => {
+    document.getElementById('lista-rifas')?.scrollIntoView({ behavior: 'smooth' })
+  }
+  return (
+    <>
+      <section className="card text-center mb-4" aria-label="Presentación">
+        <div className="flex justify-center"><Logo variant="ticket" /></div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-800 mt-2">RifaPay</h1>
+        <p className="text-lg sm:text-xl font-semibold text-slate-600 mt-1">Tus rifas en piloto automático</p>
+        <p className="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
+          Comprá números y pagá por transferencia. La confirmación llega sola, sin comisiones.
+        </p>
+        <div className="flex gap-2 justify-center mt-4 flex-wrap">
+          <button className="btn" onClick={scrollToList}>Ver rifas</button>
+          <NavButton to="/login" variant="btn-sec">Crear tu rifa</NavButton>
+        </div>
+        <ul className="flex gap-4 justify-center mt-4 text-sm text-slate-600 flex-wrap">
+          <li>✓ Sin comisiones</li>
+          <li>⚡ Confirmación automática</li>
+          <li>🔒 Pagos verificados</li>
+        </ul>
+      </section>
+      <div id="lista-rifas">
+        <RaffleList items={items} slow={slow} />
+      </div>
+      <WhatsButton />
+    </>
+  )
+}
+
+function RaffleList({ items, slow }) {
   if (items === null) return (
     <div className="grid gap-4 md:grid-cols-2" aria-busy="true" aria-label="Cargando rifas">
       {[0, 1].map(i => (
@@ -37,7 +69,6 @@ export default function Home() {
           <NavButton to={`/rifa/${r.id}`} className="mt-3">Elegir números</NavButton>
         </div>
       ))}
-      <WhatsButton />
     </div>
   )
 }

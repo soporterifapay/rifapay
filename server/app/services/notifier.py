@@ -152,7 +152,9 @@ def receipt_text(buyer_name: str, raffle_title: str, numbers: list, amount: floa
         lines.append(f"Destino: {dest}")
     lines += ["",
               "Conservá el ID de orden ante cualquier reclamo.",
-              "Constancia de compra RifaPay. No reemplaza el comprobante de tu banco."]
+              "Constancia de compra RifaPay. No reemplaza el comprobante de tu banco.",
+              "",
+              "RifaPay - Tus rifas en piloto automático"]
     return "\n".join(lines)
 
 
@@ -181,6 +183,7 @@ def receipt_html(buyer_name: str, raffle_title: str, numbers: list, amount: floa
 {draw_row}{dest_row}</table>
 <p style="font-size:12px;color:#64748b;">Conserv&aacute; el ID de orden ante cualquier reclamo.<br>
 Constancia de compra RifaPay. No reemplaza el comprobante de tu banco.</p>
+<p style="font-size:12px;color:#94a3b8;">RifaPay - Tus rifas en piloto autom&aacute;tico</p>
 <p><a href="{e(order_url)}" style="display:inline-block;background:#059669;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">Ver mis n&uacute;meros</a></p>
 </div></div>"""
 
