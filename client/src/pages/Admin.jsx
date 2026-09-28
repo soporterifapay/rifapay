@@ -30,7 +30,7 @@ export default function Admin() {
 
   const load = () => api.get('/api/admin/raffles' + (filtro ? `?status=${filtro}` : ''))
     .then(r => setItems(r.data)).catch(() => {})
-  useEffect(load, [filtro])
+  useEffect(() => { load() }, [filtro])
 
   const act = (fn, okMsg) => fn
     .then(() => { if (okMsg) toast(okMsg, 'ok'); load() })

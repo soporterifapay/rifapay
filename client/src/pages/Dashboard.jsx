@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client.js'
 import { AsyncButton, Spinner, StatusBadge, fmtMoney, useAsync, useToast } from '../components/ui.jsx'
-
+import { splitOrders } from '../lib/orders.js'
 export default function Dashboard() {
   const [raffles, setRaffles] = useState([])
   const [mp, setMp] = useState({ status: 'disconnected' })
@@ -135,14 +135,30 @@ function RaffleRow({ r, reload }) {
       {r.status === 'rejected' && (
         <p className="text-sm mt-2 text-red-600">Rechazada: {r.rejection_reason}</p>)}
       {msg && <p className="text-sm mt-2">{msg}</p>}
-      <div className="mt-2 text-sm">
-        {orders.map(o => (
-          <div key={o.id} className="flex justify-between gap-2 flex-wrap border-b py-1">
-            <span>N° {o.numbers.join(',')} - {o.buyer} - {fmtMoney(o.amount)}</span>
-            <StatusBadge status={o.status} />
-          </div>
-        ))}
-      </div>
+      <OrderList orders={orders} />
+    </div>
+  )
+}
+
+function OrderList({ orders }) {
+  const { live, history } = splitOrders(orders)
+  const row = (o) => (
+    <div key={o.id} className="flex justify-between gap-2 flex-wrap border-b py-1">
+      <span>N° {o.numbers.join(',')} - {o.buyer} - {fmtMoney(o.amount)}</span>
+      {o.effective === 'reserved_live' ? <StatusBadge status="reserved" />
+        : o.effective === 'expired_hold' ? <span className="badge badge-warn">Vencida - número libre</span>
+        : <StatusBadge status={o.status} />}
+    </div>
+  )
+  return (
+    <div className="mt-2 text-sm">
+      {live.map(row)}
+      {history.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-slate-600">Historial ({history.length})</summary>
+          {history.map(row)}
+        </details>
+      )}
     </div>
   )
 }

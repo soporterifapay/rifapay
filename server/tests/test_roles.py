@@ -88,6 +88,13 @@ def test_ordenes_ajenas_404(client, token):
     assert client.get(f"/api/organizer/export/{r['id']}.csv", headers=H2).status_code == 404
 
 
+def test_ordenes_con_limite(client, token):
+    H = {"Authorization": f"Bearer {token}"}
+    r = _rifa(client, token)
+    assert client.get(f"/api/organizer/raffles/{r['id']}/orders?limit=1", headers=H).status_code == 200
+    assert client.get(f"/api/organizer/raffles/{r['id']}/orders?limit=500", headers=H).status_code == 200
+
+
 def test_flujo_aprobacion_y_pausa(monkeypatch, client, token, db):
     ta = _admin(client, monkeypatch)
     HA = {"Authorization": f"Bearer {ta}"}

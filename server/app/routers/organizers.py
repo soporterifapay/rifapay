@@ -90,10 +90,11 @@ def my_raffles(db: Session = Depends(get_db), org: models.Organizer = Depends(cu
 
 
 @router.get("/raffles/{raffle_id}/orders")
-def raffle_orders(raffle_id: str, db: Session = Depends(get_db), org: models.Organizer = Depends(current_organizer)):
+def raffle_orders(raffle_id: str, limit: int = 100, db: Session = Depends(get_db), org: models.Organizer = Depends(current_organizer)):
     import json
     r = own_raffle(db, org, raffle_id)
-    orders = db.query(models.Order).filter(models.Order.raffle_id == r.id).order_by(models.Order.created_at.desc()).all()
+    limit = max(1, min(limit, 200))
+    orders = db.query(models.Order).filter(models.Order.raffle_id == r.id).order_by(models.Order.created_at.desc()).limit(limit).all()
     return [
         {"id": o.id, "numbers": json.loads(o.numbers_json), "amount": o.amount, "status": o.status,
          "buyer": o.buyer_name, "created_at": iso_z(o.created_at), "expires_at": iso_z(o.expires_at)}
