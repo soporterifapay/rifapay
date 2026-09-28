@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client.js'
-import { Logo } from '../components/Logo.jsx'
+import { LogoMark } from '../components/Logo.jsx'
 import { NavButton, ProgressBar, WhatsButton, fmtMoney } from '../components/ui.jsx'
 
 export default function Home() {
@@ -18,12 +18,8 @@ export default function Home() {
   return (
     <>
       <section className="card text-center mb-4" aria-label="Presentación">
-        <div className="flex justify-center"><Logo variant="ticket" /></div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-800 mt-2">RifaPay</h1>
-        <p className="text-lg sm:text-xl font-semibold text-slate-600 mt-1">Tus rifas en piloto automático</p>
-        <p className="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
-          Comprá números y pagá por transferencia. La confirmación llega sola, sin comisiones.
-        </p>
+        <div className="flex justify-center"><LogoMark variant="ticket" size={56} /></div>
+        <p className="text-lg sm:text-xl font-semibold text-slate-600 mt-2">Tus rifas en piloto automático</p>
         <div className="flex gap-2 justify-center mt-4 flex-wrap">
           <button className="btn" onClick={scrollToList}>Ver rifas</button>
           <NavButton to="/login" variant="btn-sec">Crear tu rifa</NavButton>
