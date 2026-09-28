@@ -12,13 +12,10 @@ export default function RaffleDetail() {
   const [sel, setSel] = useState([])
   const [error, setError] = useState('')
   const [form, setForm] = useState({ buyer_name: '', buyer_phone: '', buyer_dni: '', buyer_email: '' })
-
   useEffect(() => {
     api.get(`/api/raffles/${id}`).then(r => setRaffle(r.data)).catch(() => setRaffle(false))
     api.get(`/api/raffles/${id}/recent`).then(r => setRecent(r.data)).catch(() => {})
   }, [id])
-  if (raffle === null) return <div className="card" aria-busy="true">Cargando...</div>
-  if (raffle === false) return <div className="card">Esta rifa no existe o aún no está publicada.</div>
 
   const toggle = (n, status) => {
     if (status !== 'available') return
@@ -42,6 +39,9 @@ export default function RaffleDetail() {
     }
   }
 
+  const [doSubmit, busySubmit] = useAsync(submit)
+  if (raffle === null) return <div className="card" aria-busy="true">Cargando...</div>
+  if (raffle === false) return <div className="card">Esta rifa no existe o aún no está publicada.</div>
   const sold = raffle.tickets.filter(t => t.status === 'sold').length
 
   return (
@@ -60,8 +60,6 @@ export default function RaffleDetail() {
           <p className="text-sm mt-3 text-slate-600">🔥 Últimos vendidos: <b>{recent.flatMap(r => r.numbers).slice(0, 12).join(', ')}</b> <span className="text-slate-400">({recent[0].ago})</span></p>
         )}
       </div>
-  const [doSubmit, busySubmit] = useAsync(submit)
-
       <form className="card flex flex-col gap-2" onSubmit={doSubmit}>
         <h3 className="font-semibold">Tus números: {sel.join(', ') || '-'}</h3>
         {sel.length > 0 && <p className="text-sm">Total estimado: <b>{fmtMoney(sel.length * raffle.price)}</b></p>}

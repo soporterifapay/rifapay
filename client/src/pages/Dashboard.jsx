@@ -117,11 +117,11 @@ function RaffleRow({ r, reload }) {
       reload()
     } catch (err) { setMsg(err.response?.data?.detail || 'Error') }
   }
+  const [doSolicitar, busySol] = useAsync(solicitar)
   return (
     <div className="card">
       <h3 className="font-semibold">{r.title} - ${r.price} <span className="text-sm text-slate-500">({ESTADOS[r.status] || r.status})</span></h3>
       <p className="text-sm">Vendidos {r.sold_count} | Reservados {r.reserved_count} / {r.total_numbers}</p>
-  const [doSolicitar, busySol] = useAsync(solicitar)
       {r.status === 'pending' && !r.requested && (
         <div className="mt-2 p-3 bg-amber-50 rounded-xl">
           <p className="text-sm">{CARTEL}</p>
