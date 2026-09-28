@@ -239,14 +239,33 @@ export function useAsync(fn) {
 
 export function NavButton({ to, children, variant = 'btn', loadingText = 'Cargando', className = '' }) {
   const [busy, setBusy] = useState(false)
-  const live = useState(() => ({ v: true }))[0]
+  const live = useState(() => ({ v: true, t0: 0, timer: null }))[0]
   const loc = useLocation()
-  useEffect(() => () => { live.v = false }, [live])
-  useEffect(() => { setBusy(false) }, [loc.pathname])
+  useEffect(() => () => {
+    live.v = false
+    if (live.timer) clearTimeout(live.timer)
+  }, [live])
+  // al cambiar de ruta, apaga (con duracion minima visible de 350ms)
+  useEffect(() => {
+    if (!live.v) return
+    const wait = Math.max(0, 350 - (Date.now() - live.t0))
+    const id = setTimeout(() => { if (live.v) setBusy(false) }, wait)
+    return () => clearTimeout(id)
+  }, [loc.pathname, live])
+  // seguridad: nunca mas de 8s trabado
+  useEffect(() => {
+    if (!busy) return
+    const id = setTimeout(() => { if (live.v) setBusy(false) }, 8000)
+    return () => clearTimeout(id)
+  }, [busy, live])
   return (
     <Link to={to} aria-busy={busy} aria-disabled={busy}
       className={`${variant} inline-block ${className} ${busy ? 'opacity-70 pointer-events-none' : ''}`}
-      onClick={() => { setBusy(true) }}>
+      onClick={() => {
+        if (loc.pathname === to) return  // misma ruta: no prender
+        live.t0 = Date.now()
+        setBusy(true)
+      }}>
       {busy ? <Spinner label={loadingText} /> : children}
     </Link>
   )
