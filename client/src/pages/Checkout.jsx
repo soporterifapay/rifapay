@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../api/client.js'
-import { AsyncButton, Countdown, StatusBadge, fmtMoney } from '../components/ui.jsx'
+import { AsyncButton, Countdown, NavButton, StatusBadge, fmtMoney } from '../components/ui.jsx'
 
 export default function Checkout() {
   const { id } = useParams()
@@ -30,7 +30,7 @@ export default function Checkout() {
       <h2 className="text-xl font-semibold">⏰ Tu reserva expiró</h2>
       <p className="mt-2">{order.notice || 'No se acreditó el pago en 30 minutos y los números volvieron a estar libres.'}</p>
       <p className="text-sm mt-2">Eran los N° <b>{order.numbers.join(', ')}</b> por <b>{fmtMoney(order.amount)}</b>.</p>
-      <a className="btn mt-4 inline-block" href={`/rifa/${order.raffle_id}`}>Elegir números de nuevo</a>
+      <NavButton to={`/rifa/${order.raffle_id}`} className="mt-4">Elegir números de nuevo</NavButton>
     </div>
   )
 
@@ -84,7 +84,7 @@ function PaidBox({ order }) {
       <p className="text-sm text-emerald-700">Te enviamos el comprobante por email. Guardá el ID ante cualquier reclamo.</p>
       <div className="flex gap-2 flex-wrap">
         <a className="btn" href={wa} target="_blank" rel="noreferrer">Recibir comprobante por WhatsApp</a>
-        <a className="btn-sec" href={`/rifa/${order.raffle_id}`}>Ver rifa</a>
+        <NavButton to={`/rifa/${order.raffle_id}`} variant="btn-sec">Ver rifa</NavButton>
       </div>
     </div>
   )

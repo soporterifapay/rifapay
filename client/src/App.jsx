@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import api from './api/client.js'
-import { ToastHost } from './components/ui.jsx'
+import { ToastHost, NavButton } from './components/ui.jsx'
 import { Logo } from './components/Logo.jsx'
 
 const Home = lazy(() => import('./pages/Home.jsx'))
@@ -27,15 +27,20 @@ function Shell() {
     setLogged(false)
     nav('/')
   }
+  const [busyOut, setBusyOut] = useState(false)
   return (
     <div className="max-w-5xl mx-auto p-4">
       <header className="flex flex-wrap gap-2 justify-between items-center py-3 sticky top-0 z-30 bg-slate-50/85 backdrop-blur border-b border-slate-200">
         <Link to="/" aria-label="RifaPay inicio"><Logo variant="ticket" /></Link>
         <nav className="flex gap-2 items-center flex-wrap">
-          {!logged && <Link className="btn" to="/login">Iniciar sesión</Link>}
-          {logged && role === 'admin' && <Link className="btn-sec" to="/admin">Panel Admin</Link>}
-          {logged && role === 'organizer' && <Link className="btn-sec" to="/dashboard">Mi panel</Link>}
-          {logged && <button className="btn-sec" onClick={logout}>Cerrar sesión</button>}
+          {!logged && <NavButton to="/login">Iniciar sesión</NavButton>}
+          {logged && role === 'admin' && <NavButton to="/admin" variant="btn-sec">Panel Admin</NavButton>}
+          {logged && role === 'organizer' && <NavButton to="/dashboard" variant="btn-sec">Mi panel</NavButton>}
+          {logged && (
+            <button className="btn-sec" disabled={busyOut} aria-busy={busyOut}
+              onClick={() => { setBusyOut(true); setTimeout(() => { logout(); setBusyOut(false) }, 350) }}>
+              {busyOut ? 'Saliendo...' : 'Cerrar sesión'}
+            </button>)}
         </nav>
       </header>
       <Suspense fallback={<div className="card" aria-busy="true">Cargando...</div>}>

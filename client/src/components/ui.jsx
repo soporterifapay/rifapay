@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 
 const Ctx = createContext(() => {})
 export const useToast = () => useContext(Ctx)
@@ -197,8 +198,7 @@ export function Spinner({ label = 'Cargando' }) {
     </span>
   )
 }
-export function AsyncButton({ onClick, children, loadingText = 'Cargando', variant = 'btn', type = 'button', disabled = false, ...rest }) {
-  const [busy, setBusy] = useState(false)
+export function AsyncButton({ onClick, children, loadingText = 'Cargando', variant = 'btn', type = 'button', disabled = false, ...rest }) {  const [busy, setBusy] = useState(false)
   const live = useState(() => ({ v: true, busy: false }))[0]
   useEffect(() => () => { live.v = false }, [live])
   const run = async (e) => {
@@ -235,4 +235,19 @@ export function useAsync(fn) {
     }
   }
   return [run, busy]
+}
+
+export function NavButton({ to, children, variant = 'btn', loadingText = 'Cargando', className = '' }) {
+  const [busy, setBusy] = useState(false)
+  const live = useState(() => ({ v: true }))[0]
+  const loc = useLocation()
+  useEffect(() => () => { live.v = false }, [live])
+  useEffect(() => { setBusy(false) }, [loc.pathname])
+  return (
+    <Link to={to} aria-busy={busy} aria-disabled={busy}
+      className={`${variant} inline-block ${className} ${busy ? 'opacity-70 pointer-events-none' : ''}`}
+      onClick={() => { setBusy(true) }}>
+      {busy ? <Spinner label={loadingText} /> : children}
+    </Link>
+  )
 }
