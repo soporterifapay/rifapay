@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/client.js'
-import { useToast } from '../components/ui.jsx'
+import { Spinner, useAsync, useToast } from '../components/ui.jsx'
 
 export default function Login() {
   const nav = useNavigate()
@@ -34,8 +34,10 @@ export default function Login() {
     }
   }
 
+  const [doAuth, busyAuth] = useAsync(submit)
+
   return (
-    <form className="card max-w-sm mx-auto flex flex-col gap-2" onSubmit={submit}>
+    <form className="card max-w-sm mx-auto flex flex-col gap-2" onSubmit={doAuth}>
       <div className="flex gap-2">
         <button type="button" className={tab === 'login' ? 'btn' : 'btn-sec'} onClick={() => setTab('login')}>Entrar</button>
         <button type="button" className={tab === 'register' ? 'btn' : 'btn-sec'} onClick={() => setTab('register')}>Crear cuenta</button>
@@ -47,7 +49,9 @@ export default function Login() {
       <input className="input" type="email" maxLength={254} placeholder="Email (ej: vos@email.com)" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
       <input className="input" type="password" minLength={8} placeholder="Contraseña (mínimo 8 caracteres)" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
       {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-      <button className="btn">{tab === 'login' ? 'Entrar' : 'Crear cuenta'}</button>
+      <button className="btn" disabled={busyAuth} aria-busy={busyAuth}>
+        {busyAuth ? <Spinner label={tab === 'login' ? 'Entrando' : 'Creando cuenta'} /> : (tab === 'login' ? 'Entrar' : 'Crear cuenta')}
+      </button>
     </form>
   )
 }

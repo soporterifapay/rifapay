@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 from pydantic_core import PydanticCustomError
 
 EMAIL_RE = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
@@ -63,6 +63,11 @@ class RaffleOut(BaseModel):
     requested: bool = False
     rejection_reason: str = ""
     draw_date: datetime | None = None
+
+    @field_serializer("draw_date")
+    def _ser_draw(self, v: datetime | None) -> str | None:
+        from .dates import iso_z
+        return iso_z(v)
 
     class Config:
         from_attributes = True

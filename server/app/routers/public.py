@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
+from ..dates import iso_z
 from ..db import get_db
 from ..services.matcher import expire_old_orders
 
@@ -67,7 +68,7 @@ def raffle_detail(raffle_id: str, db: Session = Depends(get_db)):
     return {
         "id": r.id, "title": r.title, "description": r.description, "price": r.price,
         "prizes": r.prizes, "total_numbers": r.total_numbers,
-        "draw_date": r.draw_date.isoformat() if r.draw_date else None,
+        "draw_date": iso_z(r.draw_date),
         "cvu": r.cvu, "alias": r.alias, "holder": r.holder,
         "tickets": [{"number": t.number, "status": t.status} for t in tickets],
     }

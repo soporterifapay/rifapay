@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client.js'
-import { StatusBadge, fmtMoney, useToast } from '../components/ui.jsx'
+import { AsyncButton, Spinner, StatusBadge, fmtMoney, useAsync, useToast } from '../components/ui.jsx'
 
 export default function Dashboard() {
   const [raffles, setRaffles] = useState([])
@@ -33,6 +33,8 @@ export default function Dashboard() {
       toast('No se pudo guardar', 'error')
     }
   }
+  const [doSavePayout, busySave] = useAsync(savePayout)
+  const [doDisconnect, busyDisc] = useAsync(() => api.post('/api/mp/disconnect').then(load))
 
   return (
     <div className="grid gap-4">
@@ -40,16 +42,18 @@ export default function Dashboard() {
         <h2 className="font-semibold">Tu cuenta de cobro</h2>
         <p className="text-sm">Estado: <b>{mp.status}</b> ({mp.mode === 'real' ? 'cuenta real' : 'simulada'}) {mp.alias && `- ${mp.alias} (${mp.cvu})`}</p>
         {mp.status !== 'connected'
-          ? <button className="btn mt-2" onClick={connect}>Conectar mi Mercado Pago</button>
-          : <button className="btn-sec mt-2" onClick={() => api.post('/api/mp/disconnect').then(load)}>Desconectar</button>}
+          ? <AsyncButton loadingText="Conectando" onClick={connect}>Conectar mi Mercado Pago</AsyncButton>
+          : <AsyncButton loadingText="Desconectando" variant="btn-sec" onClick={() => doDisconnect()}>Desconectar</AsyncButton>}
         {mp.status === 'connected' && (
-          <form className="flex flex-col gap-2 mt-3" onSubmit={savePayout}>
+          <form className="flex flex-col gap-2 mt-3" onSubmit={doSavePayout}>
             <p className="text-sm font-medium">Tus datos para cobrar (los ve el comprador):</p>
             <input className="input" placeholder={`CVU actual: ${mp.cvu || '-'}`} value={form.cvu} onChange={e => setForm({ ...form, cvu: e.target.value })} />
             <input className="input" placeholder={`Alias actual: ${mp.alias || '-'}`} value={form.alias} onChange={e => setForm({ ...form, alias: e.target.value })} />
             <input className="input" placeholder={`Titular actual: ${mp.holder || '-'}`} value={form.holder} onChange={e => setForm({ ...form, holder: e.target.value })} />
             <div className="flex gap-2 items-center">
-              <button className="btn">Guardar datos</button>
+              <button className="btn" disabled={busySave} aria-busy={busySave}>
+                {busySave ? <Spinner label="Guardando" /> : 'Guardar datos'}
+              </button>
               {saved && <span className="text-sm text-emerald-700">{saved}</span>}
             </div>
           </form>
@@ -68,25 +72,32 @@ const ESTADOS = { pending: 'Pendiente de autorización', active: 'Activa', pause
 
 function CreateRaffle({ done }) {
   const [f, setF] = useState({ title: '', total_numbers: 100, price: '', prizes: '', draw_date: '' })
+  const toast = useToast()
+  const [doCreate, busyCreate] = useAsync(async (e) => {
+    e.preventDefault()
+    try {
+      await api.post('/api/organizer/raffles', {
+        title: f.title, total_numbers: Number(f.total_numbers), price: Number(f.price),
+        prizes: f.prizes, draw_date: f.draw_date ? new Date(f.draw_date).toISOString() : null,
+      })
+      setF({ title: '', total_numbers: 100, price: '', prizes: '', draw_date: '' })
+      toast('Rifa creada. Quedó pendiente de autorización.', 'ok')
+      done()
+    } catch (err) {
+      toast(typeof err.response?.data?.detail === 'string' ? err.response.data.detail : 'Error al crear', 'error')
+    }
+  })
   return (
-    <form className="card flex flex-col gap-2" onSubmit={async (e) => {
-      e.preventDefault()
-      try {
-        await api.post('/api/organizer/raffles', {
-          title: f.title, total_numbers: Number(f.total_numbers), price: Number(f.price),
-          prizes: f.prizes, draw_date: f.draw_date ? new Date(f.draw_date).toISOString() : null,
-        })
-        setF({ title: '', total_numbers: 100, price: '', prizes: '', draw_date: '' })
-        done()
-      } catch (err) { alert(err.response?.data?.detail || 'Error al crear') }
-    }}>
+    <form className="card flex flex-col gap-2" onSubmit={doCreate}>
       <h3 className="font-semibold">Crear rifa (queda pendiente hasta que el admin la autorice)</h3>
       <input className="input" placeholder="Título" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} required />
       <input className="input" type="number" min="1" max="10000" placeholder="Cantidad de números" value={f.total_numbers} onChange={e => setF({ ...f, total_numbers: e.target.value })} required />
       <input className="input" type="number" step="0.01" min="0.01" placeholder="Precio por número" value={f.price} onChange={e => setF({ ...f, price: e.target.value })} required />
       <input className="input" placeholder="Premios" value={f.prizes} onChange={e => setF({ ...f, prizes: e.target.value })} />
       <input className="input" type="datetime-local" value={f.draw_date} onChange={e => setF({ ...f, draw_date: e.target.value })} required />
-      <button className="btn">Crear rifa</button>
+      <button className="btn" disabled={busyCreate} aria-busy={busyCreate}>
+        {busyCreate ? <Spinner label="Creando rifa" /> : 'Crear rifa'}
+      </button>
     </form>
   )
 }
@@ -110,10 +121,13 @@ function RaffleRow({ r, reload }) {
     <div className="card">
       <h3 className="font-semibold">{r.title} - ${r.price} <span className="text-sm text-slate-500">({ESTADOS[r.status] || r.status})</span></h3>
       <p className="text-sm">Vendidos {r.sold_count} | Reservados {r.reserved_count} / {r.total_numbers}</p>
+  const [doSolicitar, busySol] = useAsync(solicitar)
       {r.status === 'pending' && !r.requested && (
         <div className="mt-2 p-3 bg-amber-50 rounded-xl">
           <p className="text-sm">{CARTEL}</p>
-          <button className="btn mt-2" onClick={solicitar}>Solicitar autorización para publicar la Rifa</button>
+          <button className="btn mt-2" disabled={busySol} aria-busy={busySol} onClick={doSolicitar}>
+            {busySol ? <Spinner label="Enviando solicitud" /> : 'Solicitar autorización para publicar la Rifa'}
+          </button>
         </div>
       )}
       {r.status === 'pending' && r.requested && (

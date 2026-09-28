@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import api from '../api/client.js'
-import { ProgressBar, TicketGrid, WhatsButton, fmtMoney, useToast } from '../components/ui.jsx'
+import { ProgressBar, Spinner, TicketGrid, WhatsButton, fmtMoney, useAsync, useToast } from '../components/ui.jsx'
 
 export default function RaffleDetail() {
   const { id } = useParams()
@@ -31,8 +31,7 @@ export default function RaffleDetail() {
     try {
       const { data } = await api.post('/api/orders', { raffle_id: id, numbers: sel, ...form })
       nav(`/orden/${data.id}`)
-    } catch (err) {
-      const code = err.response?.status
+    } catch (err) {      const code = err.response?.status
       const detail = err.response?.data?.detail
       const msg = code === 409 ? 'Alguien se llevó uno de esos números. Elegí otros.'
         : code === 429 ? 'Demasiados intentos, esperá un minuto.'
@@ -61,7 +60,9 @@ export default function RaffleDetail() {
           <p className="text-sm mt-3 text-slate-600">🔥 Últimos vendidos: <b>{recent.flatMap(r => r.numbers).slice(0, 12).join(', ')}</b> <span className="text-slate-400">({recent[0].ago})</span></p>
         )}
       </div>
-      <form className="card flex flex-col gap-2" onSubmit={submit}>
+  const [doSubmit, busySubmit] = useAsync(submit)
+
+      <form className="card flex flex-col gap-2" onSubmit={doSubmit}>
         <h3 className="font-semibold">Tus números: {sel.join(', ') || '-'}</h3>
         {sel.length > 0 && <p className="text-sm">Total estimado: <b>{fmtMoney(sel.length * raffle.price)}</b></p>}
         <label className="text-sm">Nombre y apellido
@@ -77,7 +78,9 @@ export default function RaffleDetail() {
           <input className="input mt-1" maxLength={20} placeholder="DNI (opcional)" value={form.buyer_dni} onChange={e => setForm({ ...form, buyer_dni: e.target.value })} />
         </label>
         {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
-        <button className="btn" disabled={!sel.length}>Reservar y ver cómo pagar</button>
+        <button className="btn" disabled={!sel.length || busySubmit} aria-busy={busySubmit}>
+          {busySubmit ? <Spinner label="Reservando" /> : 'Reservar y ver cómo pagar'}
+        </button>
       </form>
       <WhatsButton />
     </div>

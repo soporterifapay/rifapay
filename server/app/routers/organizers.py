@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..config import settings
+from ..dates import iso_z
 from ..db import get_db
 from ..deps import current_organizer, own_raffle, role_for_email
 from ..ratelimit import limit_auth
@@ -95,7 +96,7 @@ def raffle_orders(raffle_id: str, db: Session = Depends(get_db), org: models.Org
     orders = db.query(models.Order).filter(models.Order.raffle_id == r.id).order_by(models.Order.created_at.desc()).all()
     return [
         {"id": o.id, "numbers": json.loads(o.numbers_json), "amount": o.amount, "status": o.status,
-         "buyer": o.buyer_name, "created_at": o.created_at.isoformat(), "expires_at": o.expires_at.isoformat()}
+         "buyer": o.buyer_name, "created_at": iso_z(o.created_at), "expires_at": iso_z(o.expires_at)}
         for o in orders
     ]
 
@@ -110,7 +111,7 @@ def export_csv(raffle_id: str, db: Session = Depends(get_db), org: models.Organi
     w = csv.writer(buf)
     w.writerow(["order_id", "numbers", "amount", "status", "buyer", "created_at"])
     for o in orders:
-        w.writerow([o.id, json.loads(o.numbers_json), o.amount, o.status, o.buyer_name, o.created_at.isoformat()])
+        w.writerow([o.id, json.loads(o.numbers_json), o.amount, o.status, o.buyer_name, iso_z(o.created_at)])
     return PlainTextResponse(buf.getvalue(), media_type="text/csv")
 
 

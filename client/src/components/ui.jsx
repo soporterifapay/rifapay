@@ -64,10 +64,12 @@ export function useCountdown(targetIso) {
   }, [])
   if (!targetIso) return null
   const ms = new Date(targetIso).getTime() - now
-  if (Number.isNaN(ms) || ms <= 0) return '00:00'
-  const m = Math.floor(ms / 60000)
+  if (Number.isNaN(ms) || ms <= 0) return '00:00:00'
+  const h = Math.floor(ms / 3600000)
+  const m = Math.floor((ms % 3600000) / 60000)
   const s = Math.floor((ms % 60000) / 1000)
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  const p = (n) => String(n).padStart(2, '0')
+  return h > 0 ? `${p(h)}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`
 }
 
 export function Countdown({ to, prefix = 'Te quedan' }) {
@@ -167,7 +169,6 @@ export function WhatsButton() {
     </>
   )
 }
-
 export function ConfirmModal({ open, title, body, confirmLabel = 'Confirmar', onConfirm, onCancel }) {
   if (!open) return null
   return (
@@ -178,9 +179,60 @@ export function ConfirmModal({ open, title, body, confirmLabel = 'Confirmar', on
         {body && <p className="text-sm mt-2">{body}</p>}
         <div className="flex gap-2 mt-4 justify-end">
           <button className="btn-sec" onClick={onCancel}>Cancelar</button>
-          <button className="btn-danger" onClick={onConfirm}>{confirmLabel}</button>
+          <AsyncButton variant="btn-danger" loadingText="Procesando" onClick={onConfirm}>{confirmLabel}</AsyncButton>
         </div>
       </div>
     </div>
   )
+}
+
+export function Spinner({ label = 'Cargando' }) {
+  return (
+    <span className="inline-flex items-center gap-2" role="status" aria-label={label}>
+      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+      </svg>
+      <span>{label}...</span>
+    </span>
+  )
+}
+export function AsyncButton({ onClick, children, loadingText = 'Cargando', variant = 'btn', type = 'button', disabled = false, ...rest }) {
+  const [busy, setBusy] = useState(false)
+  const live = useState(() => ({ v: true, busy: false }))[0]
+  useEffect(() => () => { live.v = false }, [live])
+  const run = async (e) => {
+    if (live.busy) return
+    live.busy = true
+    setBusy(true)
+    try {
+      await onClick(e)
+    } finally {
+      live.busy = false
+      if (live.v) setBusy(false)
+    }
+  }
+  return (
+    <button type={type} className={variant} disabled={disabled || busy} aria-busy={busy} aria-disabled={disabled || busy} onClick={run} {...rest}>
+      {busy ? <Spinner label={loadingText} /> : children}
+    </button>
+  )
+}
+
+export function useAsync(fn) {
+  const [busy, setBusy] = useState(false)
+  const live = useState(() => ({ v: true, busy: false }))[0]
+  useEffect(() => () => { live.v = false }, [live])
+  const run = async (...args) => {
+    if (live.busy) return
+    live.busy = true
+    setBusy(true)
+    try {
+      return await fn(...args)
+    } finally {
+      live.busy = false
+      if (live.v) setBusy(false)
+    }
+  }
+  return [run, busy]
 }

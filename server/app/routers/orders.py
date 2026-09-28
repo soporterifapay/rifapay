@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..config import settings
+from ..dates import iso_z
 from ..db import get_db
 from ..ratelimit import limit_auth, limit_orders, limit_upload
 from ..services.matcher import generate_unique_amount, run_matcher
@@ -100,7 +101,7 @@ def order_status(order_id: str, db: Session = Depends(get_db)):
         draw = ""
     return {
         "id": o.id, "numbers": json.loads(o.numbers_json), "amount": o.amount, "status": o.status,
-        "expires_at": o.expires_at.isoformat(), "cvu": r.cvu, "alias": r.alias, "holder": r.holder,
+        "expires_at": iso_z(o.expires_at), "cvu": r.cvu, "alias": r.alias, "holder": r.holder,
         "notice": note.message if note else "",
         "raffle_id": r.id, "raffle_title": r.title,
         "buyer_name": o.buyer_name, "paid_at": paid_at, "draw_date": draw,

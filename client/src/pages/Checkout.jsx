@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../api/client.js'
-import { Countdown, StatusBadge, fmtMoney } from '../components/ui.jsx'
+import { AsyncButton, Countdown, StatusBadge, fmtMoney } from '../components/ui.jsx'
 
 export default function Checkout() {
   const { id } = useParams()
@@ -49,7 +49,7 @@ export default function Checkout() {
       {!paid && (
         <>
           <p className="text-sm mt-3">Esta página se actualiza sola. Puede tardar hasta 2 horas por el banco.</p>
-          <button className="btn mt-3" onClick={() => api.post(`/api/orders/${id}/notified`).catch(() => {})}>Ya transferí, avisar</button>
+          <AsyncButton loadingText="Avisando" onClick={() => api.post(`/api/orders/${id}/notified`).then(load).catch(() => {})}>Ya transferí, avisar</AsyncButton>
         </>
       )}
       {paid && <PaidBox order={order} />}

@@ -160,3 +160,16 @@ def test_listado_trae_draw_y_description(client, auth_org):
     db.close()
     data = client.get("/api/raffles").json()
     assert data and "draw_date" in data[0] and "description" in data[0]
+
+
+def test_fechas_con_zona_utc(client, auth_org):
+    org, token = auth_org
+    rid = _raffle(client, token)
+    data = client.get("/api/raffles").json()
+    mine = [x for x in data if x["id"] == rid]
+    if mine:
+        assert mine[0]["draw_date"].endswith("Z")
+    o = client.post("/api/orders", json={"raffle_id": rid, "numbers": [1], "buyer_name": "Zed",
+                                         "buyer_email": "z@ejemplo.com"}).json()
+    s = client.get(f"/api/orders/{o['id']}").json()
+    assert s["expires_at"].endswith("Z")

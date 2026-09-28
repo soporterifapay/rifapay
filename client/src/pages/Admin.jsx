@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client.js'
-import { ConfirmModal, StatusBadge, fmtMoney, useToast } from '../components/ui.jsx'
+import { ConfirmModal, Spinner, StatusBadge, AsyncButton, fmtMoney, useAsync, useToast } from '../components/ui.jsx'
 
 const ESTADOS = { pending: 'Pendiente', active: 'Activa', paused: 'Pausada', closed: 'Cerrada', rejected: 'Rechazada' }
 
@@ -13,6 +13,12 @@ export default function Admin() {
   const [rejectFor, setRejectFor] = useState(null)
   const [reason, setReason] = useState('')
   const toast = useToast()
+  const [doReject, busyRej] = useAsync(async () => {
+    const r = rejectFor
+    if (!r) return
+    setRejectFor(null)
+    await act(api.post(`/api/admin/raffles/${r.id}/reject`, { reason }), 'Rifa rechazada')
+  })
 
   useEffect(() => {
     api.get('/api/organizer/me').then(r => {
@@ -38,8 +44,7 @@ export default function Admin() {
           <option value="">Todas</option>
           {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <button className="btn-sec" onClick={load}>Recargar</button>
-      </div>
+        <AsyncButton variant="btn-sec" loadingText="Cargando" onClick={load}>Recargar</AsyncButton>      </div>
       {items.map(r => (
         <div key={r.id} className="card">
           <div className="flex justify-between flex-wrap gap-2">
@@ -52,13 +57,13 @@ export default function Admin() {
             </div>
             <div className="flex gap-2 flex-wrap">
               {(r.status === 'pending' || r.status === 'rejected') && (
-                <button className="btn" onClick={() => act(api.post(`/api/admin/raffles/${r.id}/approve`), 'Rifa aprobada y publicada')}>Aprobar</button>)}
+                <AsyncButton loadingText="Aprobando" onClick={() => act(api.post(`/api/admin/raffles/${r.id}/approve`), 'Rifa aprobada y publicada')}>Aprobar</AsyncButton>)}
               {r.status === 'pending' && (
                 <button className="btn-sec" onClick={() => { setRejectFor(r); setReason('') }}>Rechazar</button>)}
               {r.status === 'active' && (
-                <button className="btn-sec" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'paused' }), 'Rifa pausada')}>Pausar</button>)}
+                <AsyncButton variant="btn-sec" loadingText="Pausando" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'paused' }), 'Rifa pausada')}>Pausar</AsyncButton>)}
               {r.status === 'paused' && (
-                <button className="btn" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'active' }), 'Rifa reanudada')}>Reanudar</button>)}
+                <AsyncButton loadingText="Reanudando" onClick={() => act(api.patch(`/api/admin/raffles/${r.id}`, { status: 'active' }), 'Rifa reanudada')}>Reanudar</AsyncButton>)}
               {(r.status === 'active' || r.status === 'paused') && (
                 <button className="btn-sec" onClick={() => setConfirm({ id: r.id, title: r.title, action: 'closed', label: 'Cerrar', body: 'No aceptará más reservas. El historial se conserva.' })}>Cerrar</button>)}
               <button className="btn-sec" onClick={() => setEdit(edit?.id === r.id ? null : r)}>Editar</button>
@@ -83,19 +88,16 @@ export default function Admin() {
       {rejectFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Motivo del rechazo">
           <div className="absolute inset-0 bg-black/40" onClick={() => setRejectFor(null)} />
-          <form className="card relative max-w-sm w-full flex flex-col gap-2" onSubmit={(e) => {
-            e.preventDefault()
-            const r = rejectFor
-            setRejectFor(null)
-            act(api.post(`/api/admin/raffles/${r.id}/reject`, { reason }), 'Rifa rechazada')
-          }}>
+          <form className="card relative max-w-sm w-full flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); doReject() }}>
             <h3 className="font-semibold">Rechazar: {rejectFor.title}</h3>
             <label className="text-sm">Motivo (lo ve el organizador)
               <input className="input mt-1" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} required />
             </label>
             <div className="flex gap-2 justify-end">
               <button type="button" className="btn-sec" onClick={() => setRejectFor(null)}>Cancelar</button>
-              <button className="btn-danger">Rechazar</button>
+              <button className="btn-danger" disabled={busyRej} aria-busy={busyRej}>
+                {busyRej ? <Spinner label="Rechazando" /> : 'Rechazar'}
+              </button>
             </div>
           </form>
         </div>
@@ -106,16 +108,20 @@ export default function Admin() {
 
 function EditForm({ r, done }) {
   const toast = useToast()
+  const [doSave, busySave] = useAsync(async (body) => {
+    try {
+      await api.patch(`/api/admin/raffles/${r.id}`, body)
+      toast('Guardado', 'ok')
+      done()
+    } catch (err) { toast(typeof err.response?.data?.detail === 'string' ? err.response.data.detail : 'Error', 'error') }
+  })
   const [f, setF] = useState({ title: r.title, price: r.price, prizes: '', draw_date: '', cvu: '', alias: '', holder: '' })
   return (
-    <form className="grid gap-2 mt-3 p-3 bg-slate-50 rounded-xl" onSubmit={async (e) => {
+    <form className="grid gap-2 mt-3 p-3 bg-slate-50 rounded-xl" onSubmit={(e) => {
       e.preventDefault()
       const body = {}
       for (const [k, v] of Object.entries(f)) if (v !== '' && v != null) body[k] = k === 'price' ? Number(v) : v
-      try {
-        await api.patch(`/api/admin/raffles/${r.id}`, body)
-        done()
-      } catch (err) { toast(typeof err.response?.data?.detail === 'string' ? err.response.data.detail : 'Error', 'error') }
+      doSave(body)
     }}>
       <p className="text-sm font-medium">Editar (admin puede todo; cantidad de números no se cambia)</p>
       <input className="input" placeholder="Título" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} />
@@ -125,7 +131,9 @@ function EditForm({ r, done }) {
       <input className="input" placeholder="CVU" onChange={e => setF({ ...f, cvu: e.target.value })} />
       <input className="input" placeholder="Alias" onChange={e => setF({ ...f, alias: e.target.value })} />
       <input className="input" placeholder="Titular" onChange={e => setF({ ...f, holder: e.target.value })} />
-      <button className="btn">Guardar</button>
+      <button className="btn" disabled={busySave} aria-busy={busySave}>
+        {busySave ? <Spinner label="Guardando" /> : 'Guardar'}
+      </button>
     </form>
   )
 }
