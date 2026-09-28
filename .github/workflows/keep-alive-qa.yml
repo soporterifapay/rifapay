@@ -3,6 +3,7 @@ name: keep-alive-qa
 # Mantiene despierta la API free de Render (duerme a los ~15 min sin trafico)
 # y con actividad el proyecto Supabase. Cada 12 min deja ~3 min de colchon
 # ante demoras de cola de GitHub. Solo lee /api/health (publico, sin secretos).
+# Nota: si GitHub pausa los schedules por inactividad, cualquier push los reactiva.
 on:
   schedule:
     - cron: '*/12 * * * *'
