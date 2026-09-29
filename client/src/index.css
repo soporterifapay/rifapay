@@ -8,6 +8,8 @@
 @tailwind components;
 @tailwind utilities;
 
+html { scroll-behavior: smooth; }
+
 body { @apply text-slate-900; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; background: linear-gradient(180deg, #faf9f7 0%, #faf6ef 55%, #f5ecdd 100%) fixed; }
 .tnum { font-variant-numeric: tabular-nums; }
 .card { @apply bg-white rounded-2xl shadow-card p-5; }

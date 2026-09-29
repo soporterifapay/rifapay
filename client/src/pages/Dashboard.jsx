@@ -39,8 +39,8 @@ export default function Dashboard() {
   return (
     <div className="grid gap-4">
       <div className="card">
-        <h2 className="font-semibold">Tu cuenta de cobro</h2>
-        <p className="text-sm">Estado: <b>{mp.status}</b> ({mp.mode === 'real' ? 'cuenta real' : 'simulada'}) {mp.alias && `- ${mp.alias} (${mp.cvu})`}</p>
+        <h2 className="font-semibold">Tu cuenta de Mercado Pago</h2>
+        <p className="text-sm">Estado: <b>{mp.status}</b> ({mp.mode === 'real' ? 'cuenta real' : 'simulada'} de Mercado Pago) {mp.alias && `- ${mp.alias} (${mp.cvu})`}</p>
         {mp.status !== 'connected'
           ? <AsyncButton loadingText="Conectando" onClick={connect}>Conectar mi Mercado Pago</AsyncButton>
           : <AsyncButton loadingText="Desconectando" variant="btn-sec" onClick={() => doDisconnect()}>Desconectar</AsyncButton>}
