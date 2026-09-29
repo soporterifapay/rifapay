@@ -22,16 +22,15 @@ export default function Home() {
     <>
       <section className="card text-center mb-4" aria-label="Presentación">
         <div className="flex justify-center"><LogoMark variant="ticket" size={56} /></div>
-        <p className="badge badge-ok mt-2">0% comisión · Siempre</p>
         <h1 className="text-2xl sm:text-3xl font-extrabold mt-2">Sin comisiones: todo lo recaudado es tuyo</h1>
         <p className="text-lg sm:text-xl font-semibold text-slate-600 mt-1">Tus rifas en piloto automático</p>
-        <p className="text-sm text-slate-600 mt-1">Rifas online sin comisión: cobrás por transferencia directa, sin intermediarios.</p>
+        <p className="text-sm text-slate-600 mt-1">Rifas online: cobrás por transferencia directa a tu cuenta, con confirmación automática.</p>
         <div className="flex gap-2 justify-center mt-4 flex-wrap">
           <button className="btn" onClick={scrollToList}>Ver rifas</button>
           <NavButton to="/login" variant="btn-sec">Crear tu rifa</NavButton>
         </div>
         <ul className="flex gap-4 justify-center mt-4 text-sm text-slate-600 flex-wrap">
-          <li>✓ 0% comisión real</li>
+          <li>✓ Dinero directo a tu cuenta</li>
           <li>⚡ Confirmación automática</li>
           <li>🔒 Pagos verificados</li>
         </ul>
