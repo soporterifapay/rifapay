@@ -67,7 +67,10 @@ function Shell() {
       <header className="flex flex-wrap gap-2 justify-between items-center py-3 sticky top-0 z-30 bg-[#faf6ef]/85 backdrop-blur border-b border-slate-200">
         <Link to="/" aria-label="RifaPay inicio"><Logo variant="ticket" /></Link>
         <nav className="flex gap-2 items-center flex-wrap">
-          {!logged && loc.pathname !== '/login' && <NavButton to="/login">Iniciar sesión</NavButton>}
+          {!logged && loc.pathname !== '/login' && (<>
+            <Link to="/login?modo=entrar" className="text-sm font-semibold text-brand-700 underline px-2 py-2">Iniciar sesión</Link>
+            <NavButton to="/login">Organizá tu rifa</NavButton>
+          </>)}
           {!logged && loc.pathname === '/login' && <NavButton to="/" variant="btn-sec">Volver al inicio</NavButton>}
           {logged && role === 'admin' && <NavButton to="/admin" variant="btn-sec">Panel Admin</NavButton>}
           {logged && role === 'organizer' && <NavButton to="/dashboard" variant="btn-sec">Mi panel</NavButton>}

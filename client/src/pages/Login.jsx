@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api/client.js'
 import { Spinner, useAsync, useToast } from '../components/ui.jsx'
 
@@ -8,9 +8,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function Login() {
   const nav = useNavigate()
   const toast = useToast()
-  const [tab, setTab] = useState('login')
-  const [form, setForm] = useState({ email: '', password: '', name: '' })
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState(params.get('modo') === 'entrar' ? 'login' : 'register')
+  const [form, setForm] = useState({ email: '', email2: '', password: '', name: '' })
   const [error, setError] = useState('')
+  useEffect(() => {
+    setTab(params.get('modo') === 'entrar' ? 'login' : 'register')
+    setError('')
+  }, [params])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -20,6 +25,20 @@ export default function Login() {
       setError(msg)
       toast(msg, 'error')
       return
+    }
+    if (tab === 'register') {
+      if (!EMAIL_RE.test(form.email2.trim())) {
+        const msg = 'Repetí tu email para confirmarlo.'
+        setError(msg)
+        toast(msg, 'error')
+        return
+      }
+      if (form.email.trim().toLowerCase() !== form.email2.trim().toLowerCase()) {
+        const msg = 'Los emails no coinciden. Revisalos.'
+        setError(msg)
+        toast(msg, 'error')
+        return
+      }
     }
     try {
       if (tab === 'login') {
@@ -62,6 +81,13 @@ export default function Login() {
               value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
               disabled={busyAuth} required />
           </label>
+          {tab === 'register' && (
+            <label className="text-sm text-slate-600">📧 Confirmá tu email
+              <input className="input mt-1" type="email" maxLength={254} placeholder="Repetí tu email"
+                value={form.email2} onChange={e => setForm({ ...form, email2: e.target.value })}
+                disabled={busyAuth} required />
+            </label>
+          )}
           <label className="text-sm text-slate-600">🔒 Contraseña
             <input className="input mt-1" type="password" minLength={8} placeholder="Tu contraseña"
               value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
