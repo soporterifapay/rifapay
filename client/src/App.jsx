@@ -10,6 +10,7 @@ const Checkout = lazy(() => import('./pages/Checkout.jsx'))
 const Login = lazy(() => import('./pages/Login.jsx'))
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Admin = lazy(() => import('./pages/Admin.jsx'))
+const Fondos = lazy(() => import('./pages/Fondos.jsx')) // TEMPORAL: prototipos de fondo
 
 function Shell() {
   const [role, setRole] = useState('')
@@ -52,6 +53,7 @@ function Shell() {
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/fondos" element={<Fondos />} /> {/* TEMPORAL */}
         </Routes>
       </Suspense>
     </div>
