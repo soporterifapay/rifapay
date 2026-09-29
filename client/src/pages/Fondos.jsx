@@ -1,45 +1,47 @@
 // TEMPORAL: pagina de prototipos de fondos (/fondos). Se elimina al elegir ganador.
-const GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E\")"
-const DOTS = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='2' cy='2' r='1.2' fill='%23047857'/%3E%3C/svg%3E\")"
-
+// Ronda 2: solo opciones LISAS (sin grano ni puntos) por feedback visual.
 const BACKGROUNDS = {
   A: {
-    nombre: 'A — Grano + Resplandor superior',
-    desc: 'Ruido de papel al 3% + halo esmeralda arriba. Calidez sutil, cero distracción.',
-    style: {
-      backgroundColor: '#faf9f7',
-      backgroundImage: `${GRAIN}, radial-gradient(1200px 320px at 50% -80px, rgba(4,120,87,0.10), transparent 70%)`,
-      backgroundBlendMode: 'multiply, normal',
-    },
-    grainOpacity: 0.035,
+    nombre: 'A — Degradado cálido vertical',
+    desc: 'Marfil arriba que funde a crema melocotón pálido abajo. Calidez pura, nada que canse la vista.',
+    style: { background: 'linear-gradient(180deg, #faf9f7 0%, #faf6ef 55%, #f5ecdd 100%)' },
   },
   B: {
-    nombre: 'B — Aurora Mesh',
-    desc: 'Manchas radiales esmeralda/ámbar difuminadas + grano leve. Moderno y cálido.',
+    nombre: 'B — Ondas suaves',
+    desc: 'Bandas curvas anchas esmeralda 4% + ámbar 3%. Movimiento liso, estética fintech amigable.',
     style: {
       backgroundColor: '#faf9f7',
-      backgroundImage: `${GRAIN}, radial-gradient(600px 380px at 12% 8%, rgba(4,120,87,0.10), transparent 70%), radial-gradient(700px 420px at 88% 20%, rgba(217,119,6,0.08), transparent 70%), radial-gradient(900px 500px at 50% 110%, rgba(4,120,87,0.05), transparent 70%)`,
-      backgroundBlendMode: 'multiply, normal, normal, normal',
+      backgroundImage: 'radial-gradient(1200px 500px at -10% 20%, rgba(4,120,87,0.06), transparent 70%), radial-gradient(1000px 480px at 110% 55%, rgba(217,119,6,0.06), transparent 70%), radial-gradient(900px 420px at 30% 95%, rgba(4,120,87,0.04), transparent 70%)',
     },
-    grainOpacity: 0.03,
   },
   C: {
-    nombre: 'C — Grilla de puntos + Viñeta cálida',
-    desc: 'Puntos esmeralda cada 24px + bordes levemente cálidos. Técnico y ordenado.',
+    nombre: 'C — Halo superior limpio',
+    desc: 'Luz esmeralda difuminada arriba sobre marfil liso. Profundidad mínima, sin textura.',
     style: {
       backgroundColor: '#faf9f7',
-      backgroundImage: `${DOTS}, radial-gradient(120% 90% at 50% 40%, transparent 60%, rgba(120,90,40,0.06))`,
+      backgroundImage: 'radial-gradient(1100px 300px at 50% -90px, rgba(4,120,87,0.12), transparent 70%)',
     },
-    grainOpacity: 0,
+  },
+  D: {
+    nombre: 'D — Hero bosque + resto marfil',
+    desc: 'Bloque hero en verde profundo con texto blanco + resto liso. Contraste profesional.',
+    style: { backgroundColor: '#faf9f7' },
+    heroDark: true,
   },
 }
 
-function Muestra() {
+function Muestra({ heroDark }) {
+  const heroStyle = heroDark
+    ? { background: 'linear-gradient(135deg, #064e3b 0%, #047857 100%)', color: '#fff' }
+    : {}
+  const subStyle = heroDark ? { color: 'rgba(255,255,255,0.85)' } : {}
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
-      <p className="badge badge-ok">Sorteo 15 de octubre</p>
-      <h2 className="text-3xl font-extrabold mt-2">Tus rifas en piloto automático</h2>
-      <p className="text-slate-600 mt-1">Comprá tu número, transferí y listo. Sin registros, sin vueltas.</p>
+      <div className="rounded-2xl p-6" style={heroStyle}>
+        <p className="badge badge-ok">Sorteo 15 de octubre</p>
+        <h2 className="text-3xl font-extrabold mt-2">Tus rifas en piloto automático</h2>
+        <p className="mt-1" style={heroDark ? subStyle : { color: '#475569' }}>Comprá tu número, transferí y listo. Sin registros, sin vueltas.</p>
+      </div>
       <div className="grid sm:grid-cols-2 gap-4 mt-6">
         <div className="card">
           <div className="skel h-28 mb-3" aria-hidden="true" />
@@ -64,19 +66,16 @@ export default function Fondos() {
   return (
     <div className="-m-4">
       <div className="max-w-5xl mx-auto p-4">
-        <h1 className="text-2xl font-extrabold">Prototipos de fondo</h1>
-        <p className="text-slate-600 text-sm">Página temporal — se elimina al elegir el ganador. Bajá para comparar las 3 opciones con contenido real.</p>
+        <h1 className="text-2xl font-extrabold">Prototipos de fondo — ronda 2 (lisos)</h1>
+        <p className="text-slate-600 text-sm">Página temporal — se elimina al elegir el ganador. Bajá para comparar las 4 opciones con contenido real.</p>
       </div>
       {Object.entries(BACKGROUNDS).map(([key, bg]) => (
-        <section key={key} style={bg.style} className="border-y border-slate-200 relative">
-          {bg.grainOpacity > 0 && (
-            <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: GRAIN, opacity: bg.grainOpacity, pointerEvents: 'none' }} />
-          )}
-          <div className="max-w-5xl mx-auto p-4 relative">
+        <section key={key} style={bg.style} className="border-y border-slate-200">
+          <div className="max-w-5xl mx-auto p-4">
             <p className="font-bold text-lg">{bg.nombre}</p>
             <p className="text-slate-600 text-sm mb-2">{bg.desc}</p>
           </div>
-          <Muestra />
+          <Muestra heroDark={bg.heroDark} />
         </section>
       ))}
     </div>
