@@ -15,24 +15,63 @@ export default function Home() {
   const scrollToList = () => {
     document.getElementById('lista-rifas')?.scrollIntoView({ behavior: 'smooth' })
   }
+  const scrollToCompare = () => {
+    document.getElementById('comparativa')?.scrollIntoView({ behavior: 'smooth' })
+  }
   return (
     <>
       <section className="card text-center mb-4" aria-label="Presentación">
         <div className="flex justify-center"><LogoMark variant="ticket" size={56} /></div>
-        <p className="text-lg sm:text-xl font-semibold text-slate-600 mt-2">Tus rifas en piloto automático</p>
+        <p className="badge badge-ok mt-2">0% comisión · Siempre</p>
+        <h1 className="text-2xl sm:text-3xl font-extrabold mt-2">Sin comisiones: todo lo recaudado es tuyo</h1>
+        <p className="text-lg sm:text-xl font-semibold text-slate-600 mt-1">Tus rifas en piloto automático</p>
+        <p className="text-sm text-slate-600 mt-1">Rifas online sin comisión: cobrás por transferencia directa, sin intermediarios.</p>
         <div className="flex gap-2 justify-center mt-4 flex-wrap">
           <button className="btn" onClick={scrollToList}>Ver rifas</button>
           <NavButton to="/login" variant="btn-sec">Crear tu rifa</NavButton>
         </div>
         <ul className="flex gap-4 justify-center mt-4 text-sm text-slate-600 flex-wrap">
-          <li>✓ Sin comisiones</li>
+          <li>✓ 0% comisión real</li>
           <li>⚡ Confirmación automática</li>
           <li>🔒 Pagos verificados</li>
         </ul>
+        <button className="text-sm text-emerald-700 underline mt-3" onClick={scrollToCompare}>Ver comparativa ↓</button>
       </section>
       <div id="lista-rifas">
         <RaffleList items={items} slow={slow} />
       </div>
+      <section id="comparativa" className="card mt-4" aria-label="Comparativa de comisiones">
+        <h2 className="text-xl font-bold text-center">¿Cuánto te queda de lo que recaudás?</h2>
+        <div className="overflow-x-auto mt-3">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-600">
+                <th className="py-2 pr-2 font-medium">Concepto</th>
+                <th className="py-2 pr-2 font-medium">Otras plataformas</th>
+                <th className="py-2 font-medium">RifaPay</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-slate-200">
+                <td className="py-2 pr-2">Comisión de la plataforma</td>
+                <td className="py-2 pr-2 tnum">5%</td>
+                <td className="py-2 font-bold text-emerald-700 tnum">0%</td>
+              </tr>
+              <tr className="border-t border-slate-200">
+                <td className="py-2 pr-2">Costo del procesador (tarjeta)</td>
+                <td className="py-2 pr-2 tnum">~6–8%</td>
+                <td className="py-2 font-bold text-emerald-700 tnum">$0 (transferencia directa)</td>
+              </tr>
+              <tr className="border-t border-slate-200">
+                <td className="py-2 pr-2 font-semibold">De cada $100.000 te quedan</td>
+                <td className="py-2 pr-2 tnum">~$87.000</td>
+                <td className="py-2 font-bold text-emerald-700 tnum">$100.000</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-slate-500 mt-2">RifaPay no cobra comisión ni intermediarios: el dinero va directo a tu cuenta. Costos de tu banco por transferir, si los hubiera, son ajenos a la plataforma.</p>
+      </section>
       <WhatsButton />
     </>
   )
