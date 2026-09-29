@@ -137,7 +137,10 @@ export function WhatsButton() {
         <div className="fixed bottom-24 right-4 sm:right-6 z-50 w-[min(92vw,21rem)]" role="dialog" aria-modal="true" aria-label="Chat de ayuda por WhatsApp">
           <div className="card !p-0 overflow-hidden">
             <div className="flex justify-between items-center px-5 py-4 text-white" style={{ background: 'linear-gradient(135deg, #25d366, #128c7e)' }}>
-              <h4 className="font-bold">💬 RifaPay Soporte</h4>
+              <div>
+                <h4 className="font-bold">💬 ¿Necesitás ayuda?</h4>
+                <p className="text-xs opacity-90">Te respondemos por WhatsApp</p>
+              </div>
               <button className="text-xl leading-none opacity-80 hover:opacity-100" onClick={() => setOpen(false)} aria-label="Cerrar chat">×</button>
             </div>
             <div className="p-5">

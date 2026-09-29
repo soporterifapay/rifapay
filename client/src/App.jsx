@@ -11,6 +11,40 @@ const Login = lazy(() => import('./pages/Login.jsx'))
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Admin = lazy(() => import('./pages/Admin.jsx'))
 
+function Footer() {
+  return (
+    <footer className="mt-8 rounded-2xl bg-slate-900 text-slate-300 px-6 py-8">
+      <div className="grid gap-6 sm:grid-cols-3">
+        <nav aria-label="RifaPay">
+          <p className="text-xs font-bold tracking-widest text-slate-500 mb-3">RIFAPAY</p>
+          <ul className="space-y-2 text-sm">
+            <li><Link className="hover:text-white" to="/">Inicio</Link></li>
+            <li><a className="hover:text-white" href="/#lista-rifas">Ver rifas</a></li>
+            <li><a className="hover:text-white" href="/#comparativa">Comparativa 0% comisión</a></li>
+            <li><Link className="hover:text-white" to="/login">Crear tu rifa</Link></li>
+          </ul>
+        </nav>
+        <div>
+          <p className="text-xs font-bold tracking-widest text-slate-500 mb-3">CONFIANZA</p>
+          <ul className="space-y-2 text-sm">
+            <li>✓ 0% comisión, siempre</li>
+            <li>⚡ Confirmación automática</li>
+            <li>🔒 Sin cookies ni rastreadores</li>
+          </ul>
+        </div>
+        <div>
+          <p className="text-xs font-bold tracking-widest text-slate-500 mb-3">CONTACTO</p>
+          <ul className="space-y-2 text-sm">
+            <li><a className="hover:text-white" href="https://wa.me/5492615362993" target="_blank" rel="noreferrer">WhatsApp</a></li>
+            <li><a className="hover:text-white" href="mailto:soporte.rifapay@gmail.com">soporte.rifapay@gmail.com</a></li>
+          </ul>
+        </div>
+      </div>
+      <p className="text-xs text-slate-500 mt-6 pt-4 border-t border-slate-800">© 2026 RifaPay · Tus rifas en piloto automático. RifaPay es la plataforma tecnológica. Verificá siempre a quién le comprás.</p>
+    </footer>
+  )
+}
+
 function Shell() {
   const [role, setRole] = useState('')
   const [logged, setLogged] = useState(false)
@@ -54,6 +88,7 @@ function Shell() {
           <Route path="/admin" element={<Admin />} />
         </Routes>
       </Suspense>
+      <Footer />
     </div>
   )
 }
