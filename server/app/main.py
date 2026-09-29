@@ -95,7 +95,7 @@ def _expiry_tick(expire_fn, match_fn) -> dict:
     return stats
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health():
     return {"ok": True, "mock_mp": settings.mp_mock_mode}
 

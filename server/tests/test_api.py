@@ -115,6 +115,11 @@ def test_rate_limit_ordenes(client, token):
     assert 429 in codes
 
 
+def test_health_get_y_head(client):
+    assert client.get("/api/health").status_code == 200
+    assert client.head("/api/health").status_code == 200  # monitores tipo UptimeRobot
+
+
 def test_order_status_trae_datos_comprobante(client, auth_org, db):
     org, token = auth_org
     rid = _raffle(client, token)
