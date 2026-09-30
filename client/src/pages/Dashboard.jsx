@@ -59,6 +59,7 @@ export default function Dashboard() {
           </form>
         )}
         <p className="text-xs text-slate-500 mt-2">Solo miramos si entra plata para confirmar números. No movemos plata.</p>
+        <ChangePassword />
       </div>
       {raffles.map(r => <RaffleRow key={r.id} r={r} reload={load} />)}
       {!raffles.length && <div className="card">Todavía no creaste rifas. Creá la primera abajo.</div>}
@@ -69,6 +70,48 @@ export default function Dashboard() {
 
 const CARTEL = 'Para publicar tu rifa debés abonar el servicio de RifaPay. Envía Solicitar autorización y te contactamos para activarla.'
 const ESTADOS = { pending: 'Pendiente de autorización', active: 'Activa', paused: 'Pausada', closed: 'Cerrada', rejected: 'Rechazada' }
+
+const PASS_GUIDE = 'Mín: 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 especial (!@#$%^&*()-_=+)'
+
+function ChangePassword() {
+  const toast = useToast()
+  const [f, setF] = useState({ current: '', nw: '', nw2: '' })
+  const [msg, setMsg] = useState('')
+  const submit = async (e) => {
+    e.preventDefault()
+    setMsg('')
+    if (f.nw !== f.nw2) {
+      const m = 'Las contraseñas nuevas no coinciden. Revisalas.'
+      setMsg(m); toast(m, 'error'); return
+    }
+    try {
+      await api.post('/api/organizer/me/password', { current: f.current, new: f.nw })
+      setF({ current: '', nw: '', nw2: '' })
+      toast('Contraseña actualizada', 'ok')
+    } catch (err) {
+      const d = err.response?.data?.detail
+      const m = typeof d === 'string' ? d : (Array.isArray(d) && d[0]?.msg ? String(d[0].msg) : 'No se pudo cambiar')
+      setMsg(m); toast(m, 'error')
+    }
+  }
+  const [doChange, busy] = useAsync(submit)
+  return (
+    <form className="flex flex-col gap-2 mt-4 pt-3 border-t border-slate-200" onSubmit={doChange}>
+      <p className="text-sm font-medium">Cambiar mi contraseña</p>
+      <input className="input" type="password" placeholder="Clave actual" value={f.current}
+        onChange={e => setF({ ...f, current: e.target.value })} disabled={busy} required />
+      <input className="input" type="password" placeholder="Nueva clave" value={f.nw}
+        onChange={e => setF({ ...f, nw: e.target.value })} disabled={busy} required />
+      <input className="input" type="password" placeholder="Repetí la nueva clave" value={f.nw2}
+        onChange={e => setF({ ...f, nw2: e.target.value })} disabled={busy} required />
+      <span className="text-xs text-slate-500">{PASS_GUIDE}</span>
+      {msg && <p className="text-sm text-red-600" role="alert">{msg}</p>}
+      <div><button className="btn-sec" disabled={busy} aria-busy={busy}>
+        {busy ? <Spinner label="Cambiando" /> : 'Cambiar contraseña'}
+      </button></div>
+    </form>
+  )
+}
 
 function CreateRaffle({ done }) {
   const [f, setF] = useState({ title: '', total_numbers: 100, price: '', prizes: '', draw_date: '' })

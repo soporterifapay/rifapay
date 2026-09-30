@@ -130,5 +130,24 @@ def admin_orders(raffle_id: str | None = Query(default=None),
     if status:
         q = q.filter(models.Order.status == status)
     return [{"id": o.id, "raffle_id": o.raffle_id, "numbers": json.loads(o.numbers_json),
-             "amount": o.amount, "status": o.status, "buyer": o.buyer_name,
-             "email": o.buyer_email} for o in q.limit(limit).all()]
+              "amount": o.amount, "status": o.status, "buyer": o.buyer_name,
+              "email": o.buyer_email} for o in q.limit(limit).all()]
+
+
+@router.get("/organizers")
+def admin_organizers(db: Session = Depends(get_db), org: models.Organizer = Depends(require_admin)):
+    return [{"id": o.id, "email": o.email, "name": o.name, "role": o.role}
+            for o in db.query(models.Organizer).order_by(models.Organizer.created_at).all()]
+
+
+@router.post("/organizers/{organizer_id}/promote")
+def admin_promote(organizer_id: str,
+                  db: Session = Depends(get_db), org: models.Organizer = Depends(require_admin)):
+    if organizer_id == org.id:
+        raise HTTPException(400, "No podés cambiar tu propio rol")
+    target = db.get(models.Organizer, organizer_id)
+    if not target:
+        raise HTTPException(404, "Organizador no existe")
+    target.role = "admin"
+    db.commit()
+    return {"id": target.id, "role": target.role}

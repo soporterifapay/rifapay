@@ -17,9 +17,21 @@ def _reg(client, email=None, name="X"):
 
 def _admin(client, monkeypatch):
     from app.config import settings
+    from app.db import SessionLocal
+    from app.seed_admin import seed_admin
     email = _mail("jefe")
-    monkeypatch.setattr(settings, "admin_emails", email)
-    return _reg(client, email, "Jefe")
+    monkeypatch.setattr(settings, "admin_email", email)
+    monkeypatch.setattr(settings, "admin_initial_password", "Jefe123!")
+    db = SessionLocal()
+    try:
+        assert seed_admin(db) is True
+        assert seed_admin(db) is False  # idempotente
+    finally:
+        db.close()
+    r = client.post("/api/organizer/auth/login",
+                    json={"email": email, "password": "Jefe123!"})
+    assert r.status_code == 200, r.text
+    return r.json()["access_token"]
 
 
 def _rifa(client, token, **kw):
@@ -30,13 +42,27 @@ def _rifa(client, token, **kw):
     return r.json()
 
 
-def test_admin_por_env(monkeypatch, client):
+def test_admin_por_seed_y_registro_siempre_organizer(monkeypatch, client, db):
+    from app.config import settings
     ta = _admin(client, monkeypatch)
     me = client.get("/api/organizer/me", headers={"Authorization": f"Bearer {ta}"}).json()
     assert me["role"] == "admin"
-    t2 = _reg(client)
-    me2 = client.get("/api/organizer/me", headers={"Authorization": f"Bearer {t2}"}).json()
+    # registrarse con el email del admin NO da admin (cierra escalacion)
+    r = client.post("/api/organizer/auth/register",
+                    json={"email": me["email"], "name": "Otro", "password": "Otro123!"})
+    assert r.status_code == 400  # email ya registrado
+    email2 = "nuevo-" + settings.admin_email
+    t2 = client.post("/api/organizer/auth/register",
+                     json={"email": email2, "name": "X", "password": "Clave123!"})
+    assert t2.status_code == 200
+    me2 = client.get("/api/organizer/me", headers={"Authorization": f"Bearer {t2.json()['access_token']}"}).json()
     assert me2["role"] == "organizer"
+    # el login tampoco asciende
+    rl = client.post("/api/organizer/auth/login",
+                     json={"email": email2, "password": "Clave123!"})
+    assert rl.status_code == 200
+    me3 = client.get("/api/organizer/me", headers={"Authorization": f"Bearer {rl.json()['access_token']}"}).json()
+    assert me3["role"] == "organizer"
 
 
 def test_register_nunca_acepta_rol(client, db):
@@ -134,3 +160,28 @@ def test_admin_edita_y_borra_con_reglas(monkeypatch, client, token):
     assert client.patch(f"/api/admin/raffles/{r['id']}", headers=HA,
                         json={"total_numbers": 9}).status_code == 400
     assert client.delete(f"/api/admin/raffles/{r['id']}", headers=HA).status_code == 200
+
+
+def test_promote_solo_admin_y_no_a_si_mismo(monkeypatch, client, token, db):
+    ta = _admin(client, monkeypatch)
+    HA = {"Authorization": f"Bearer {ta}"}
+    H = {"Authorization": f"Bearer {token}"}
+    orgs = client.get("/api/admin/organizers", headers=HA)
+    assert orgs.status_code == 200
+    assert client.get("/api/admin/organizers", headers=H).status_code == 403
+    target = [o for o in orgs.json() if o["role"] == "organizer"][0]
+    assert client.post(f"/api/admin/organizers/{target['id']}/promote", headers=H).status_code == 403
+    r = client.post(f"/api/admin/organizers/{target['id']}/promote", headers=HA)
+    assert r.status_code == 200 and r.json()["role"] == "admin"
+    me_admin = client.get("/api/organizer/me", headers=HA).json()
+    assert client.post(f"/api/admin/organizers/{me_admin['id']}/promote", headers=HA).status_code == 400
+
+
+def test_cambiar_clave(client, token):
+    H = {"Authorization": f"Bearer {token}"}
+    assert client.post("/api/organizer/me/password", headers=H,
+                       json={"current": "mal", "new": "Nueva123!"}).status_code == 401
+    assert client.post("/api/organizer/me/password", headers=H,
+                       json={"current": "Clave123!", "new": "corta"}).status_code == 422
+    assert client.post("/api/organizer/me/password", headers=H,
+                       json={"current": "Clave123!", "new": "Nueva123!"}).status_code == 200

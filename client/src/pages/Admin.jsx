@@ -33,8 +33,11 @@ export default function Admin() {
   useEffect(() => { load() }, [filtro])
 
   const act = (fn, okMsg) => fn
-    .then(() => { if (okMsg) toast(okMsg, 'ok'); load() })
+    .then(() => { if (okMsg) toast(okMsg, 'ok'); load(); loadOrgs() })
     .catch(e => toast(typeof e.response?.data?.detail === 'string' ? e.response.data.detail : 'Error', 'error'))
+  const [orgs, setOrgs] = useState([])
+  const loadOrgs = () => api.get('/api/admin/organizers').then(r => setOrgs(r.data)).catch(() => {})
+  useEffect(() => { loadOrgs() }, [])
 
   return (
     <div className="grid gap-4">
@@ -75,6 +78,19 @@ export default function Admin() {
         </div>
       ))}
       {!items.length && <div className="card">Sin rifas con ese filtro.</div>}
+      <div className="card">
+        <h3 className="font-semibold">Organizadores</h3>
+        <ul className="mt-2 space-y-2 text-sm">
+          {orgs.map(o => (
+            <li key={o.id} className="flex justify-between items-center flex-wrap gap-2">
+              <span>{o.name || '—'} · {o.email} {o.role === 'admin' ? <b className="badge badge-ok">admin</b> : <span className="badge badge-mut">organizador</span>}</span>
+              {o.role !== 'admin' && (
+                <AsyncButton variant="btn-sec" loadingText="Promoviendo"
+                  onClick={() => act(api.post(`/api/admin/organizers/${o.id}/promote`), `${o.email} ahora es admin`)}>Hacer admin</AsyncButton>)}
+            </li>
+          ))}
+        </ul>
+      </div>
       <ConfirmModal open={!!confirm} title={`${confirm?.label}: ${confirm?.title}`} body={confirm?.body}
         confirmLabel={confirm?.label}
         onCancel={() => setConfirm(null)}

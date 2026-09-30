@@ -7,7 +7,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "cambiar-en-produccion"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24
-    admin_emails: str = ""  # separados por coma; reciben rol admin al login/register. Nunca en codigo.
+    admin_emails: str = ""  # DEPRECADO: el rol ya no se asigna por email. Ver admin_email (seed).
+    admin_email: str = ""  # email del admin pre-creado por seed (mismo en QA y PRD)
+    admin_initial_password: str = ""  # solo bootstrap: si el admin no existe se crea con esta clave
 
     def admin_email_list(self) -> list[str]:
         return [e.strip().lower() for e in self.admin_emails.split(",") if e.strip()]

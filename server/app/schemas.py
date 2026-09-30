@@ -55,6 +55,16 @@ class OrganizerLogin(BaseModel):
     password: str
 
 
+class PasswordChange(BaseModel):
+    current: str
+    new: str = Field(min_length=8)
+
+    @field_validator("new")
+    @classmethod
+    def _new(cls, v: str) -> str:
+        return _check_password(v)
+
+
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"

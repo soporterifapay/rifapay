@@ -20,6 +20,13 @@ logger = logging.getLogger("rifapay")
 async def lifespan(app: FastAPI):
     if settings.database_url.startswith("sqlite"):
         Base.metadata.create_all(bind=engine)
+    from .seed_admin import seed_admin
+    db = SessionLocal()
+    try:
+        if seed_admin(db):
+            logger.info("admin pre-creado desde seed")
+    finally:
+        db.close()
     task = asyncio.create_task(_expiry_loop())
     logger.info("expiry loop started (cada %ss)", settings.expiry_check_seconds)
     yield

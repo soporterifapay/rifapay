@@ -27,11 +27,7 @@ def current_organizer(
     org = db.get(models.Organizer, organizer_id)
     if org is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Organizador no existe")
-    # rol siempre de DB + lista env (nunca del token ni del cliente)
-    want = role_for_email(org.email)
-    if org.role != want and want == "admin":
-        org.role = "admin"
-        db.commit()
+    # rol siempre de DB (nunca del token, del cliente ni de listas env)
     return org
 
 

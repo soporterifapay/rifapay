@@ -5,7 +5,7 @@ from .. import models, schemas
 from ..config import settings
 from ..dates import iso_z
 from ..db import get_db
-from ..deps import current_organizer, own_raffle, role_for_email
+from ..deps import current_organizer, own_raffle
 from ..ratelimit import limit_auth
 from ..security import create_access_token, hash_password, verify_password
 
@@ -17,7 +17,7 @@ def register(data: schemas.OrganizerRegister, request: Request, db: Session = De
     if db.query(models.Organizer).filter(models.Organizer.email == data.email).first():
         raise HTTPException(400, "Email ya registrado")
     org = models.Organizer(email=data.email, name=data.name, password_hash=hash_password(data.password),
-                           role=role_for_email(data.email))
+                           role="organizer")
     db.add(org)
     db.commit()
     db.refresh(org)
@@ -27,6 +27,16 @@ def register(data: schemas.OrganizerRegister, request: Request, db: Session = De
 @router.get("/me")
 def me(org: models.Organizer = Depends(current_organizer)):
     return {"id": org.id, "email": org.email, "name": org.name, "role": org.role}
+
+
+@router.post("/me/password")
+def change_password(data: schemas.PasswordChange,
+                    db: Session = Depends(get_db), org: models.Organizer = Depends(current_organizer)):
+    if not verify_password(data.current, org.password_hash):
+        raise HTTPException(401, "La clave actual no es correcta")
+    org.password_hash = hash_password(data.new)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/auth/login", response_model=schemas.TokenOut, dependencies=[Depends(limit_auth)])
