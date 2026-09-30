@@ -3,14 +3,25 @@
 
 def test_register_login(client):
     r = client.post("/api/organizer/auth/register",
-                    json={"email": "nuevo@ejemplo.com", "name": "N", "password": "clave123"})
+                    json={"email": "nuevo@ejemplo.com", "name": "N", "password": "Clave123!"})
     assert r.status_code == 200
     r = client.post("/api/organizer/auth/login",
-                    json={"email": "nuevo@ejemplo.com", "password": "clave123"})
+                    json={"email": "nuevo@ejemplo.com", "password": "Clave123!"})
     assert r.status_code == 200 and r.json()["access_token"]
     r = client.post("/api/organizer/auth/login",
                     json={"email": "nuevo@ejemplo.com", "password": "mal"})
     assert r.status_code == 401
+
+
+def test_register_exige_clave_fuerte(client):
+    debiles = ["corta1!", "sinmayuscula1!", "SINMINUSCULA1!", "SinNumero!!", "SinEspecial11"]
+    for i, pwd in enumerate(debiles):
+        r = client.post("/api/organizer/auth/register",
+                        json={"email": f"debil{i}@ejemplo.com", "name": "D", "password": pwd})
+        assert r.status_code == 422, (pwd, r.text)
+    r = client.post("/api/organizer/auth/register",
+                    json={"email": "fuerte@ejemplo.com", "name": "F", "password": "Fuerte123!"})
+    assert r.status_code == 200
 
 
 def test_sin_token_no_entra(client):

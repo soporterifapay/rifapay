@@ -4,13 +4,18 @@ import api from '../api/client.js'
 import { Spinner, useAsync, useToast } from '../components/ui.jsx'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PASS_SPECIAL = '!@#$%^&*()-_=+'
+const PASS_GUIDE = 'Mín: 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 especial (!@#$%^&*()-_=+)'
+const passFuerte = (v) => (v || '').length >= 8
+  && /[A-Z]/.test(v) && /[a-z]/.test(v) && /\d/.test(v)
+  && [...v].some(c => PASS_SPECIAL.includes(c))
 
 export default function Login() {
   const nav = useNavigate()
   const toast = useToast()
   const [params] = useSearchParams()
   const [tab, setTab] = useState(params.get('modo') === 'entrar' ? 'login' : 'register')
-  const [form, setForm] = useState({ email: '', email2: '', password: '', name: '' })
+  const [form, setForm] = useState({ email: '', password: '', password2: '', name: '' })
   const [error, setError] = useState('')
   useEffect(() => {
     setTab(params.get('modo') === 'entrar' ? 'login' : 'register')
@@ -27,14 +32,14 @@ export default function Login() {
       return
     }
     if (tab === 'register') {
-      if (!EMAIL_RE.test(form.email2.trim())) {
-        const msg = 'Repetí tu email para confirmarlo.'
+      if (!passFuerte(form.password)) {
+        const msg = 'Contraseña débil. ' + PASS_GUIDE
         setError(msg)
         toast(msg, 'error')
         return
       }
-      if (form.email.trim().toLowerCase() !== form.email2.trim().toLowerCase()) {
-        const msg = 'Los emails no coinciden. Revisalos.'
+      if (form.password !== form.password2) {
+        const msg = 'Las contraseñas no coinciden. Revisalas.'
         setError(msg)
         toast(msg, 'error')
         return
@@ -81,10 +86,16 @@ export default function Login() {
               value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
               disabled={busyAuth} required />
           </label>
+          <label className="text-sm text-slate-600">🔒 Contraseña
+            <input className="input mt-1" type="password" minLength={8} placeholder="Tu contraseña"
+              value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+              disabled={busyAuth} required />
+            {tab === 'register' && <span className="text-xs text-slate-500">{PASS_GUIDE}</span>}
+          </label>
           {tab === 'register' && (
-            <label className="text-sm text-slate-600">📧 Confirmá tu email
-              <input className="input mt-1" type="email" maxLength={254} placeholder="Repetí tu email"
-                value={form.email2} onChange={e => setForm({ ...form, email2: e.target.value })}
+            <label className="text-sm text-slate-600">🔒 Repetí tu contraseña
+              <input className="input mt-1" type="password" minLength={8} placeholder="Repetí tu contraseña"
+                value={form.password2} onChange={e => setForm({ ...form, password2: e.target.value })}
                 disabled={busyAuth} required />
             </label>
           )}

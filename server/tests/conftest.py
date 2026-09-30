@@ -68,7 +68,7 @@ def raffle(db, org):
 @pytest.fixture()
 def token(client):
     c = client.post("/api/organizer/auth/register",
-                    json={"email": _mail("org"), "name": "O2", "password": "clave123"})
+                    json={"email": _mail("org"), "name": "O2", "password": "Clave123!"})
     assert c.status_code == 200, c.text
     return c.json()["access_token"]
 
@@ -78,7 +78,7 @@ def auth_org(client, db):
     """Organizador con token + conexión MP mock conectada."""
     email = _mail("mock")
     c = client.post("/api/organizer/auth/register",
-                    json={"email": email, "name": "Mock", "password": "clave123"})
+                    json={"email": email, "name": "Mock", "password": "Clave123!"})
     token = c.json()["access_token"]
     org = db.query(models.Organizer).filter(models.Organizer.email == email).first()
     conn = models.MpConnection(organizer_id=org.id, mp_user_id=f"mock-user-{org.id}",

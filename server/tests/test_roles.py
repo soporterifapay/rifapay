@@ -10,7 +10,7 @@ def _mail(prefix="r"):
 
 def _reg(client, email=None, name="X"):
     r = client.post("/api/organizer/auth/register",
-                    json={"email": email or _mail(), "name": name, "password": "clave12345"})
+                    json={"email": email or _mail(), "name": name, "password": "Clave123!"})
     assert r.status_code == 200, r.text
     return r.json()["access_token"]
 

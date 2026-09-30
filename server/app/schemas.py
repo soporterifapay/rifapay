@@ -17,6 +17,23 @@ def _check_email(v: str) -> str:
     return v
 
 
+PASSWORD_SPECIAL = set("!@#$%^&*()-_=+")
+PASSWORD_GUIDE = "Mín: 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 especial (!@#$%^&*()-_=+)"
+
+
+def _check_password(v: str) -> str:
+    v = v or ""
+    if (
+        len(v) < 8
+        or not any(c.isupper() for c in v)
+        or not any(c.islower() for c in v)
+        or not any(c.isdigit() for c in v)
+        or not any(c in PASSWORD_SPECIAL for c in v)
+    ):
+        raise PydanticCustomError("password_debil", "Contraseña débil. " + PASSWORD_GUIDE)
+    return v
+
+
 class OrganizerRegister(BaseModel):
     email: str
     name: str = ""
@@ -26,6 +43,11 @@ class OrganizerRegister(BaseModel):
     @classmethod
     def _email(cls, v: str) -> str:
         return _check_email(v)
+
+    @field_validator("password")
+    @classmethod
+    def _password(cls, v: str) -> str:
+        return _check_password(v)
 
 
 class OrganizerLogin(BaseModel):
