@@ -90,7 +90,6 @@ export default function Login() {
             <input className="input mt-1" type="password" minLength={8} placeholder="Tu contraseña"
               value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
               disabled={busyAuth} required />
-            {tab === 'register' && <span className="text-xs text-slate-500">{PASS_GUIDE}</span>}
           </label>
           {tab === 'register' && (
             <label className="text-sm text-slate-600">🔒 Repetí tu contraseña
@@ -99,11 +98,7 @@ export default function Login() {
                 disabled={busyAuth} required />
             </label>
           )}
-          <label className="text-sm text-slate-600">🔒 Contraseña
-            <input className="input mt-1" type="password" minLength={8} placeholder="Tu contraseña"
-              value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-              disabled={busyAuth} required />
-          </label>
+          {tab === 'register' && <p className="text-xs text-slate-500 -mt-1">{PASS_GUIDE}</p>}
           {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
           <button className="btn w-full" disabled={busyAuth} aria-busy={busyAuth}>
             {busyAuth ? <Spinner label={tab === 'login' ? 'Entrando' : 'Creando cuenta'} /> : (tab === 'login' ? '🔑 Iniciar sesión' : '📝 Crear cuenta')}
