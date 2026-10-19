@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_refresh_token: str = ""
+    brevo_api_key: str = ""
+    brevo_sender_email: str = ""
+    brevo_sender_name: str = "RifaPay"
+    brevo_reply_to: str = ""
+    selftest_recipient: str = ""
+    whatsapp_number: str = "5492615362993"
 
     class Config:
         env_file = ".env"

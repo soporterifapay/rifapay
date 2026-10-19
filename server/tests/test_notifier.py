@@ -64,3 +64,106 @@ def test_gmail_ok_mockeado(monkeypatch, db, org, raffle):
     notifier.notify_paid(db, o)
     assert db.query(models.Notification).filter_by(order_id=o.id, kind="receipt").count() == 2
 
+
+def test_brevo_prioritario_sobre_gmail(monkeypatch, db, org, raffle):
+    import datetime as _dt
+
+    calls = []
+
+    class R:
+        status_code = 200
+
+        def json(self):
+            return {"access_token": "tok", "expires_in": 3600}
+
+        def raise_for_status(self):
+            return None
+
+    class G:
+        status_code = 200
+        text = ""
+
+    monkeypatch.setattr(notifier.settings, "smtp_from", "RifaPay <x@y.com>")
+    monkeypatch.setattr(notifier.settings, "google_client_id", "cid")
+    monkeypatch.setattr(notifier.settings, "google_client_secret", "csec")
+    monkeypatch.setattr(notifier.settings, "google_refresh_token", "rtok")
+    monkeypatch.setattr(notifier.settings, "brevo_api_key", "xkeysib-test")
+    monkeypatch.setattr(notifier.settings, "brevo_sender_email", "soporte@ejemplo.com")
+    monkeypatch.setattr(notifier.settings, "brevo_reply_to", "soporte@ejemplo.com")
+    import httpx as _hx
+
+    def fake_post(url, **kw):
+        calls.append(url)
+        return R() if "oauth2" in url else G()
+
+    monkeypatch.setattr(_hx, "post", fake_post)
+    o = models.Order(raffle_id=raffle.id, organizer_id=org.id, numbers_json="[7]",
+                     amount=1000.44, buyer_name="Brevo", buyer_email="b@ejemplo.com",
+                     status="paid", created_at=_dt.datetime.utcnow(),
+                     expires_at=_dt.datetime.utcnow() + _dt.timedelta(minutes=30))
+    db.add(o)
+    db.commit()
+    notifier.notify_paid(db, o)
+    assert any("brevo" in u for u in calls)
+    assert not any("gmail" in u for u in calls)  # no se usa gmail si brevo responde bien
+    mail = db.query(models.Notification).filter_by(order_id=o.id, channel="email").one()
+    assert mail.status == "sent" and "7" in mail.message
+    assert "wa.me" in mail.message  # ancla de confianza: whatsapp en el comprobante
+
+
+def test_brevo_falla_cae_a_gmail(monkeypatch, db, org, raffle):
+    import datetime as _dt
+
+    calls = []
+
+    class R:
+        status_code = 200
+
+        def json(self):
+            return {"access_token": "tok", "expires_in": 3600}
+
+        def raise_for_status(self):
+            return None
+
+    class Fail:
+        status_code = 401
+        text = "key invalida"
+
+    class Ok:
+        status_code = 200
+        text = ""
+
+    monkeypatch.setattr(notifier.settings, "smtp_from", "RifaPay <x@y.com>")
+    monkeypatch.setattr(notifier.settings, "google_client_id", "cid")
+    monkeypatch.setattr(notifier.settings, "google_client_secret", "csec")
+    monkeypatch.setattr(notifier.settings, "google_refresh_token", "rtok")
+    monkeypatch.setattr(notifier.settings, "brevo_api_key", "xkeysib-rota")
+    monkeypatch.setattr(notifier.settings, "brevo_sender_email", "soporte@ejemplo.com")
+    import httpx as _hx
+
+    def fake_post(url, **kw):
+        calls.append(url)
+        if "oauth2" in url:
+            return R()
+        if "brevo" in url:
+            return Fail()
+        return Ok()
+
+    monkeypatch.setattr(_hx, "post", fake_post)
+    o = models.Order(raffle_id=raffle.id, organizer_id=org.id, numbers_json="[9]",
+                     amount=500.55, buyer_name="Fallback", buyer_email="f@ejemplo.com",
+                     status="paid", created_at=_dt.datetime.utcnow(),
+                     expires_at=_dt.datetime.utcnow() + _dt.timedelta(minutes=30))
+    db.add(o)
+    db.commit()
+    notifier.notify_paid(db, o)
+    assert any("brevo" in u for u in calls)
+    assert any("gmail" in u for u in calls)  # cae al canal siguiente
+    mail = db.query(models.Notification).filter_by(order_id=o.id, channel="email").one()
+    assert mail.status == "sent"
+
+
+def test_seltest_invalido_se_omite():
+    assert notifier.send_selftest_email("") == "skipped"
+    assert notifier.send_selftest_email("no-es-mail") == "skipped"
+

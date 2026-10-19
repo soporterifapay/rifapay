@@ -48,13 +48,66 @@ def notify_expiry(db: Session, order: models.Order, numbers: list) -> None:
 
 
 def _send_email(to: str, subject: str, body: str, html_body: str | None = None) -> str:
-    if not settings.smtp_from:
-        return "skipped"
+    """Cadena de envio con respaldo: Brevo -> Gmail API -> SMTP.
+
+    Si un canal falla se prueba el siguiente; nunca se pierde el comprobante
+    mientras haya al menos un canal configurado.
+    """
     if not is_valid_email(to):
         return "skipped"
-    if settings.google_client_id and settings.google_client_secret and settings.google_refresh_token:
-        return _send_gmail(to, subject, body, html_body)
-    return _send_smtp(to, subject, body, html_body)
+    attempts = []
+    if settings.brevo_api_key and settings.brevo_sender_email:
+        attempts.append(lambda: _send_brevo(to, subject, body, html_body))
+    if settings.smtp_from and settings.google_client_id and settings.google_client_secret \
+            and settings.google_refresh_token:
+        attempts.append(lambda: _send_gmail(to, subject, body, html_body))
+    if settings.smtp_from and settings.smtp_host:
+        attempts.append(lambda: _send_smtp(to, subject, body, html_body))
+    for attempt in attempts:
+        try:
+            if attempt() == "sent":
+                return "sent"
+        except Exception:
+            continue
+    return "skipped"
+
+
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+
+
+def _send_brevo(to: str, subject: str, body: str, html_body: str | None = None) -> str:
+    """Envío por API de Brevo (plan gratuito 300/día). Sin vencimiento de llave."""
+    import logging
+
+    import httpx
+
+    log = logging.getLogger("rifapay")
+    try:
+        sender = {"email": settings.brevo_sender_email,
+                  "name": settings.brevo_sender_name or "RifaPay"}
+        payload = {
+            "sender": sender,
+            "to": [{"email": to.strip()}],
+            "subject": f"[RifaPay] {subject}",
+            "textContent": body,
+        }
+        if html_body:
+            payload["htmlContent"] = html_body
+        if settings.brevo_reply_to:
+            payload["replyTo"] = {"email": settings.brevo_reply_to}
+        r = httpx.post(BREVO_URL, headers={"api-key": settings.brevo_api_key,
+                                           "accept": "application/json",
+                                           "content-type": "application/json"},
+                       json=payload, timeout=20)
+        if r.status_code in (200, 201):
+            return "sent"
+        log.warning("brevo send %s: %s", r.status_code, r.text[:200])
+        if r.status_code in (401, 403):
+            log.warning("brevo: key rechazada o cuenta sin permisos (revisar plan/dominio)")
+        return "skipped"
+    except Exception as exc:
+        log.warning("brevo error: %s", str(exc)[:200])
+        return "skipped"
 
 
 _gmail_token: dict = {}
@@ -154,6 +207,8 @@ def receipt_text(buyer_name: str, raffle_title: str, numbers: list, amount: floa
               "Conservá el ID de orden ante cualquier reclamo.",
               "Constancia de compra RifaPay. No reemplaza el comprobante de tu banco.",
               "",
+              f"Dudas o consultas: https://wa.me/{settings.whatsapp_number}",
+              "",
               "RifaPay - Tus rifas en piloto automático"]
     return "\n".join(lines)
 
@@ -183,6 +238,8 @@ def receipt_html(buyer_name: str, raffle_title: str, numbers: list, amount: floa
 {draw_row}{dest_row}</table>
 <p style="font-size:12px;color:#64748b;">Conserv&aacute; el ID de orden ante cualquier reclamo.<br>
 Constancia de compra RifaPay. No reemplaza el comprobante de tu banco.</p>
+<p style="font-size:13px;color:#059669;margin:0 0 4px;">&iquest;Dudas o consultas? Escribinos por WhatsApp:
+<a href="https://wa.me/{e(settings.whatsapp_number)}" style="color:#047857;font-weight:bold;">wa.me/{e(settings.whatsapp_number)}</a></p>
 <p style="font-size:12px;color:#94a3b8;">RifaPay - Tus rifas en piloto autom&aacute;tico</p>
 <p><a href="{e(order_url)}" style="display:inline-block;background:#059669;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">Ver mis n&uacute;meros</a></p>
 </div></div>"""
@@ -237,4 +294,21 @@ def notify_paid(db: Session, order: models.Order) -> None:
 
 def datetime_now_str() -> str:
     from datetime import datetime
+
     return datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+
+
+SELFTEST_SUBJECT = "Prueba de correo RifaPay"
+SELFTEST_TEXT = (
+    "Este es un correo automático de prueba de RifaPay.\n"
+    "Sirve para confirmar que el envío de emails sigue funcionando.\n"
+    "Si lo recibís, todo está bien.\n\n"
+    "RifaPay - Tus rifas en piloto automático"
+)
+
+
+def send_selftest_email(recipient: str) -> str:
+    """Auto-test diario: mantiene viva la key del proveedor y avisa si el envio falla."""
+    if not recipient or not is_valid_email(recipient):
+        return "skipped"
+    return _send_email(recipient, SELFTEST_SUBJECT, SELFTEST_TEXT)

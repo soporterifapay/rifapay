@@ -52,15 +52,38 @@ async def _expiry_loop():
     """Revisor automático: trae movimientos reales, expira reservas y corre matcher."""
     from .services.matcher import expire_old_orders, run_matcher
 
+    last_selftest = ""
     while True:
         try:
             stats = await asyncio.to_thread(_expiry_tick, expire_old_orders, run_matcher)
             logger.info("poll tick: %s", stats)
+            last_selftest = await asyncio.to_thread(_maybe_selftest, last_selftest)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             logger.warning("expiry loop: %s", exc)
         await asyncio.sleep(settings.expiry_check_seconds)
+
+
+def _maybe_selftest(last_selftest: str) -> str:
+    """Auto-test diario de correo (1 vez por dia). Mantiene viva la key de Brevo
+    (que caduca a los 90 dias sin uso) y delata cortes de envio en 24h."""
+    from datetime import datetime
+
+    from .services import notifier
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    if last_selftest == today:
+        return last_selftest
+    recipient = settings.selftest_recipient
+    if not recipient:
+        return last_selftest
+    status = notifier.send_selftest_email(recipient)
+    if status == "sent":
+        logger.info("selftest email: sent")
+    else:
+        logger.warning("selftest email: %s (revisar proveedor de correo)", status)
+    return today
 
 
 def _expiry_tick(expire_fn, match_fn) -> dict:
