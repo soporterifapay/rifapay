@@ -300,15 +300,32 @@ def datetime_now_str() -> str:
 
 SELFTEST_SUBJECT = "Prueba de correo RifaPay"
 SELFTEST_TEXT = (
-    "Este es un correo automático de prueba de RifaPay.\n"
+    "Este es un correo automático de prueba de RifaPay (llega una vez por semana).\n"
     "Sirve para confirmar que el envío de emails sigue funcionando.\n"
-    "Si lo recibís, todo está bien.\n\n"
+    "Si dejás de recibir estos correos, algo se rompió: avisanos por WhatsApp.\n\n"
+    "RifaPay - Tus rifas en piloto automático"
+)
+
+ALERT_SUBJECT = "Alerta: el envío de correo de RifaPay falló"
+ALERT_TEXT = (
+    "El envío automático de correos de RifaPay está fallando.\n"
+    "Último estado: {status}\n"
+    "Revisá las credenciales del proveedor de correo y los logs del servidor.\n"
+    "Mientras tanto, los comprobantes siguen visibles en la web y en WhatsApp.\n\n"
     "RifaPay - Tus rifas en piloto automático"
 )
 
 
 def send_selftest_email(recipient: str) -> str:
-    """Auto-test diario: mantiene viva la key del proveedor y avisa si el envio falla."""
+    """Latido semanal: mantiene viva la key del proveedor (caduca a los 90 días
+    sin uso) y confirma que el envío sigue vivo."""
     if not recipient or not is_valid_email(recipient):
         return "skipped"
     return _send_email(recipient, SELFTEST_SUBJECT, SELFTEST_TEXT)
+
+
+def send_email_alert(recipient: str, status: str) -> str:
+    """Alerta de fallo. Usa la cadena de envío: si Brevo está caído, sale por Gmail."""
+    if not recipient or not is_valid_email(recipient):
+        return "skipped"
+    return _send_email(recipient, ALERT_SUBJECT, ALERT_TEXT.format(status=status))

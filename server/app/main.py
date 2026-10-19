@@ -52,12 +52,12 @@ async def _expiry_loop():
     """Revisor automático: trae movimientos reales, expira reservas y corre matcher."""
     from .services.matcher import expire_old_orders, run_matcher
 
-    last_selftest = ""
+    state = {"last_ok": None, "last_attempt": None, "alerted": False}
     while True:
         try:
             stats = await asyncio.to_thread(_expiry_tick, expire_old_orders, run_matcher)
             logger.info("poll tick: %s", stats)
-            last_selftest = await asyncio.to_thread(_maybe_selftest, last_selftest)
+            state = await asyncio.to_thread(_maybe_selftest, state)
         except asyncio.CancelledError:
             raise
         except Exception as exc:
@@ -65,25 +65,44 @@ async def _expiry_loop():
         await asyncio.sleep(settings.expiry_check_seconds)
 
 
-def _maybe_selftest(last_selftest: str) -> str:
-    """Auto-test diario de correo (1 vez por dia). Mantiene viva la key de Brevo
-    (que caduca a los 90 dias sin uso) y delata cortes de envio en 24h."""
-    from datetime import datetime
+SELFTEST_INTERVAL_DAYS = 7
+SELFTEST_RETRY_MINUTES = 30
+
+
+def _maybe_selftest(state: dict) -> dict:
+    """Latido semanal del correo + alerta inmediata si falla.
+
+    1) Mantiene viva la key del proveedor de correo (caduca a los 90 días sin uso).
+    2) Si el envío falla, avisa por el canal que todavía funcione (si Brevo cae,
+       la alerta sale por Gmail) y reintenta cada 30 minutos.
+    """
+    from datetime import datetime, timedelta
 
     from .services import notifier
 
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-    if last_selftest == today:
-        return last_selftest
     recipient = settings.selftest_recipient
     if not recipient:
-        return last_selftest
+        return state
+    now = datetime.utcnow()
+    last_ok = state.get("last_ok")
+    last_attempt = state.get("last_attempt")
+    if last_ok is not None and (now - last_ok) < timedelta(days=SELFTEST_INTERVAL_DAYS):
+        return state
+    if last_attempt is not None and (now - last_attempt) < timedelta(minutes=SELFTEST_RETRY_MINUTES):
+        return state
+    state["last_attempt"] = now
     status = notifier.send_selftest_email(recipient)
     if status == "sent":
-        logger.info("selftest email: sent")
+        state["last_ok"] = now
+        state["alerted"] = False
+        logger.info("selftest email: sent (proximo en %s dias)", SELFTEST_INTERVAL_DAYS)
     else:
-        logger.warning("selftest email: %s (revisar proveedor de correo)", status)
-    return today
+        logger.warning("selftest email: %s", status)
+        if not state.get("alerted"):
+            notifier.send_email_alert(recipient, status)
+            state["alerted"] = True
+            logger.warning("selftest email: alerta enviada (fallo del envio)")
+    return state
 
 
 def _expiry_tick(expire_fn, match_fn) -> dict:
