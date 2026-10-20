@@ -6,6 +6,7 @@ from .. import models, schemas
 from ..db import get_db
 from ..deps import require_admin
 from ..services import notifier
+from ..services.stats import ticket_counts
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ TRANSITIONS = {
 
 
 def _counts(db: Session, r: models.Raffle) -> dict:
+    """Contadores de una rifa (uso puntual: borrado)."""
     sold = db.query(models.Ticket).filter(
         models.Ticket.raffle_id == r.id, models.Ticket.status == "sold").count()
     res = db.query(models.Ticket).filter(
@@ -32,12 +34,16 @@ def all_raffles(status: str | None = Query(default=None),
     q = db.query(models.Raffle)
     if status:
         q = q.filter(models.Raffle.status == status)
+    rows = q.order_by(models.Raffle.created_at.desc()).all()
+    counts = ticket_counts(db)
+    owners = {o.id: o for o in db.query(models.Organizer).all()}
     out = []
-    for r in q.order_by(models.Raffle.created_at.desc()).all():
-        owner = db.get(models.Organizer, r.organizer_id)
-        c = _counts(db, r)
+    for r in rows:
+        owner = owners.get(r.organizer_id)
+        c = counts.get(r.id, {})
         out.append({"id": r.id, "title": r.title, "status": r.status, "price": r.price,
-                    "total_numbers": r.total_numbers, "sold": c["sold"], "reserved": c["reserved"],
+                    "total_numbers": r.total_numbers, "sold": c.get("sold", 0),
+                    "reserved": c.get("reserved", 0),
                     "owner_email": owner.email if owner else "?",
                     "requested": r.publish_requested_at is not None,
                     "rejection_reason": r.rejection_reason})

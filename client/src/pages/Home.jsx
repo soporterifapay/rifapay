@@ -7,7 +7,7 @@ export default function Home() {
   const [items, setItems] = useState(null)
   const [slow, setSlow] = useState(false)
   useEffect(() => {
-    const t = setTimeout(() => setSlow(true), 4000)
+    const t = setTimeout(() => setSlow(true), 10000)
     api.get('/api/raffles').then(r => setItems(r.data)).catch(() => setItems([]))
       .finally(() => clearTimeout(t))
     return () => clearTimeout(t)

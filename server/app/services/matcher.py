@@ -16,6 +16,7 @@ def generate_unique_amount(base_total: float, db: Session, raffle_id: str) -> fl
         round(r[0], 2)
         for r in db.query(models.Order.amount)
         .filter(models.Order.raffle_id == raffle_id, models.Order.status.in_(["reserved", "receipt_uploaded"]))
+        .distinct()
         .all()
     }
     for _ in range(100):
@@ -42,9 +43,15 @@ def expire_old_orders(db: Session) -> int:
         .all()
     )
     count = 0
+    if not olds:
+        return 0
+    # una sola query para los tickets de TODAS las órdenes vencidas (antes: 1 por orden)
+    by_order: dict[str, list] = {}
+    for t in db.query(models.Ticket).filter(models.Ticket.order_id.in_([o.id for o in olds])).all():
+        by_order.setdefault(t.order_id, []).append(t)
     for o in olds:
         limit = o.created_at + timedelta(hours=settings.match_window_hours) + timedelta(minutes=settings.reservation_minutes)
-        tickets = db.query(models.Ticket).filter(models.Ticket.order_id == o.id).all()
+        tickets = by_order.get(o.id, [])
         # siempre libera lo visible al vencer la reserva
         for t in tickets:
             if t.status == "reserved":
@@ -58,19 +65,25 @@ def expire_old_orders(db: Session) -> int:
             o.status = "expired"
             notify_expiry(db, o, numbers)
             count += 1
-    if count or olds:
-        db.commit()
+    db.commit()
     return count
 
 
+MATCHER_BATCH = 200
+
+
 def run_matcher(db: Session) -> int:
-    """Busca movimientos no usados que calcen con órdenes activas. Devuelve matches."""
-    expire_old_orders(db)
+    """Busca movimientos no usados que calcen con órdenes activas. Devuelve matches.
+
+    La expiración la corre el worker por separado (antes se ejecutaba dos veces
+    por tick: acá y en el worker).
+    """
     matched = 0
     orders = (
         db.query(models.Order)
         .filter(models.Order.status.in_(["reserved", "receipt_uploaded"]))
         .order_by(models.Order.created_at.asc())
+        .limit(MATCHER_BATCH)
         .all()
     )
     for order in orders:
@@ -97,13 +110,17 @@ def run_matcher(db: Session) -> int:
             numbers = json.loads(order.numbers_json)
         except Exception:
             numbers = []
-        for n in numbers:
-            t = (
-                db.query(models.Ticket)
-                .filter(models.Ticket.raffle_id == order.raffle_id, models.Ticket.number == int(n))
-                .with_for_update()
-                .first()
-            )
+        nums = [int(n) for n in numbers]
+        # una sola query con lock para todos los tickets de la orden (antes: 1 por número)
+        tmap = {
+            t.number: t
+            for t in db.query(models.Ticket)
+            .filter(models.Ticket.raffle_id == order.raffle_id, models.Ticket.number.in_(nums))
+            .with_for_update()
+            .all()
+        }
+        for n in nums:
+            t = tmap.get(n)
             if t is None:
                 continue
             if t.order_id is not None and t.order_id != order.id:

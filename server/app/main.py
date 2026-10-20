@@ -25,6 +25,15 @@ async def lifespan(app: FastAPI):
     try:
         if seed_admin(db):
             logger.info("admin pre-creado desde seed")
+        # sweep completo de fechas una sola vez al arrancar (después, cada 6h solo lo reciente)
+        from .services import mp_client
+
+        try:
+            fixed = mp_client.repair_movement_dates(db, since_days=None)
+            if fixed:
+                logger.info("repair de fechas al arranque: %s corregidos", fixed)
+        except Exception as exc:
+            logger.warning("repair al arranque fallo: %s", exc)
     finally:
         db.close()
     task = asyncio.create_task(_expiry_loop())
@@ -134,7 +143,7 @@ def _expiry_tick(expire_fn, match_fn) -> dict:
                     stats["errors"] += 1
                     logger.warning("poll %s: %s", conn.organizer_id, exc)
         try:
-            stats["repaired"] = mp_client.repair_movement_dates(db)
+            stats["repaired"] = mp_client.repair_movement_dates(db, since_days=30)
         except Exception:
             pass
         stats["expired"] = expire_fn(db)

@@ -4,18 +4,22 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..dates import iso_z
 from ..db import get_db
-from ..services.matcher import expire_old_orders
+from ..services.stats import ticket_counts
 
 router = APIRouter()
 
 
 @router.get("/raffles", response_model=list[schemas.RaffleOut])
 def list_raffles(db: Session = Depends(get_db)):
-    expire_old_orders(db)  # el contador nunca muestra reservas vencidas
+    """Lista pública. Sin escrituras: la expiración de reservas la hace el worker
+    (cada 60s), así esta ruta no bloquea la base ni dispara correos."""
+    rows = db.query(models.Raffle).filter(models.Raffle.status == "active").all()
+    counts = ticket_counts(db)
     out = []
-    for r in db.query(models.Raffle).filter(models.Raffle.status == "active").all():
-        sold = db.query(models.Ticket).filter(models.Ticket.raffle_id == r.id, models.Ticket.status == "sold").count()
-        res = db.query(models.Ticket).filter(models.Ticket.raffle_id == r.id, models.Ticket.status == "reserved").count()
+    for r in rows:
+        c = counts.get(r.id, {})
+        sold = c.get("sold", 0)
+        res = c.get("reserved", 0)
         out.append(schemas.RaffleOut(
             id=r.id, title=r.title, description=r.description, total_numbers=r.total_numbers,
             price=r.price, prizes=r.prizes, status=r.status, sold_count=sold, reserved_count=res,
@@ -59,7 +63,6 @@ def recent_sales(raffle_id: str, limit: int = 10, db: Session = Depends(get_db))
 
 @router.get("/raffles/{raffle_id}")
 def raffle_detail(raffle_id: str, db: Session = Depends(get_db)):
-    expire_old_orders(db)
     r = db.get(models.Raffle, raffle_id)
     if not r:
         from fastapi import HTTPException

@@ -140,14 +140,23 @@ def parse_mp_date(raw: str) -> datetime:
         return datetime.utcnow()
 
 
-def repair_movement_dates(db) -> int:
-    """Repara fechas mal parseadas usando el raw_json guardado. Devuelve corregidas."""
+def repair_movement_dates(db, since_days: int | None = None) -> int:
+    """Repara fechas mal parseadas usando el raw_json guardado. Devuelve corregidas.
+
+    since_days: acota la revisión a los movimientos de los últimos N días
+    (None = todos). El worker lo llama al arrancar (todo) y luego cada 6h
+    (solo recientes), para no releer la tabla completa cada minuto.
+    """
     import json as _json
 
     from .. import models
 
+    q = db.query(models.Movement)
+    if since_days is not None:
+        cutoff = datetime.utcnow() - timedelta(days=since_days)
+        q = q.filter(models.Movement.date_created >= cutoff)
     fixed = 0
-    for mov in db.query(models.Movement).all():
+    for mov in q.all():
         try:
             raw = _json.loads(mov.raw_json or "{}")
             dc = raw.get("date_created")
