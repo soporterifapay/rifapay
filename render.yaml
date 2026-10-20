@@ -1,17 +1,26 @@
 services:
+  # ------------------------------------------------------------------
+  # Deploy MANUAL (dashboard de Render), no Blueprint: sin tarjeta.
+  #   QA  -> rama master   -> rifapay-qa      + rifapay-client
+  #   PRD -> rama production-> rifapay-prd     + rifapay-client-prd
+  # Regenerar una key Fernet valida:
+  #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+  # ------------------------------------------------------------------
   - type: web
-    name: rifapay-api
+    name: rifapay-qa
     runtime: python
     rootDir: server
+    branch: master
     buildCommand: "pip install -r requirements.txt && alembic upgrade head"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: "/api/health"
     envVars:
       - key: DATABASE_URL
-        sync: false  # Supabase pooler URI (servicios manuales, sin Blueprint)
+        sync: false  # Supabase pooler URI (session pooler, puerto 6543)
       - key: JWT_SECRET
         generateValue: true
       - key: FERNET_KEY
-        generateValue: true
+        sync: false  # OJO: generateValue NO genera una key Fernet valida (rompe encrypt/decrypt)
       - key: PYTHON_VERSION
         value: "3.12.0"
       - key: MP_MOCK_MODE
@@ -24,17 +33,118 @@ services:
         value: "https://rifapay-qa-pv5f.onrender.com/api/mp/callback"
       - key: FRONTEND_URL
         value: "https://rifapay-client.onrender.com"
+      - key: APP_ENV
+        value: "qa"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_INITIAL_PASSWORD
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: BREVO_SENDER_NAME
+        value: "RifaPay"
+      - key: BREVO_REPLY_TO
+        sync: false
+      - key: SELFTEST_RECIPIENT
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+  - type: web
+    name: rifapay-prd
+    runtime: python
+    rootDir: server
+    branch: production
+    buildCommand: "pip install -r requirements.txt && alembic upgrade head"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: "/api/health"
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # Supabase PRD (Oregon us-west-2)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FERNET_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: MP_MOCK_MODE
+        value: "False"
+      - key: MP_CLIENT_ID
+        sync: false
+      - key: MP_CLIENT_SECRET
+        sync: false
+      - key: MP_REDIRECT_URI
+        value: "https://rifapay-prd.onrender.com/api/mp/callback"
+      - key: FRONTEND_URL
+        value: "https://rifapay-client-prd.onrender.com"
+      - key: APP_ENV
+        value: "prd"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_INITIAL_PASSWORD
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: BREVO_SENDER_NAME
+        value: "RifaPay"
+      - key: BREVO_REPLY_TO
+        sync: false
+      - key: SELFTEST_RECIPIENT
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
   - type: web
     name: rifapay-client
     runtime: static
     rootDir: client
+    branch: master
     buildCommand: "npm install && npm run build"
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
         value: "https://rifapay-qa-pv5f.onrender.com"
-
-# NOTA: deploy actual con servicios manuales (sin Blueprint, sin tarjeta):
-# - rifapay-qa (Web Service Python, root server) + Supabase rifapay-qa como DB.
-# - rifapay-client (Static Site, root client).
-# La seccion databases de abajo solo aplica si se usa Blueprint con tarjeta.
+  - type: web
+    name: rifapay-client-prd
+    runtime: static
+    rootDir: client
+    branch: production
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: "https://rifapay-prd.onrender.com"

@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     app_name: str = "RifaPay"
+    app_env: str = "qa"  # qa | prd. Las_var y correos se marcan segun el ambiente.
     database_url: str = "sqlite:///./rifapay_dev.db"
     jwt_secret: str = "cambiar-en-produccion"
     jwt_algorithm: str = "HS256"

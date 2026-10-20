@@ -1,4 +1,4 @@
-"""Avisos y comprobantes al comprador. Email best-effort por SMTP si está configurado,
+﻿"""Avisos y comprobantes al comprador. Email best-effort por SMTP si está configurado,
 siempre se guarda aviso onscreen para mostrar en la página de la orden."""
 import html
 import re
@@ -11,6 +11,12 @@ from .. import models
 from ..config import settings
 
 EMAIL_RE = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+
+
+def brand() -> str:
+    """Marca visible en correos. En QA se marca como pruebas para no confusions."""
+    env = (settings.app_env or "").strip().lower()
+    return "RifaPay (pruebas)" if env in ("qa", "test", "dev", "staging") else "RifaPay"
 
 
 def is_valid_email(v: str) -> bool:
@@ -88,7 +94,7 @@ def _send_brevo(to: str, subject: str, body: str, html_body: str | None = None) 
         payload = {
             "sender": sender,
             "to": [{"email": to.strip()}],
-            "subject": f"[RifaPay] {subject}",
+            "subject": f"[{brand()}] {subject}",
             "textContent": body,
         }
         if html_body:
@@ -144,7 +150,7 @@ def _send_gmail(to: str, subject: str, body: str, html_body: str | None = None) 
         msg = EmailMessage()
         msg["From"] = settings.smtp_from
         msg["To"] = to.strip()
-        msg["Subject"] = f"[RifaPay] {subject}"
+        msg["Subject"] = f"[{brand()}] {subject}"
         msg.set_content(body)
         if html_body:
             msg.add_alternative(html_body, subtype="html")
@@ -169,7 +175,7 @@ def _send_smtp(to: str, subject: str, body: str, html_body: str | None = None) -
         msg = EmailMessage()
         msg["From"] = settings.smtp_from
         msg["To"] = to.strip()
-        msg["Subject"] = f"[RifaPay] {subject}"
+        msg["Subject"] = f"[{brand()}] {subject}"
         msg.set_content(body)
         if html_body:
             msg.add_alternative(html_body, subtype="html")
@@ -209,7 +215,7 @@ def receipt_text(buyer_name: str, raffle_title: str, numbers: list, amount: floa
               "",
               f"Dudas o consultas: https://wa.me/{settings.whatsapp_number}",
               "",
-              "RifaPay - Tus rifas en piloto automático"]
+              f"{brand()} - Tus rifas en piloto automático"]
     return "\n".join(lines)
 
 
@@ -240,7 +246,7 @@ def receipt_html(buyer_name: str, raffle_title: str, numbers: list, amount: floa
 Constancia de compra RifaPay. No reemplaza el comprobante de tu banco.</p>
 <p style="font-size:13px;color:#059669;margin:0 0 4px;">&iquest;Dudas o consultas? Escribinos por WhatsApp:
 <a href="https://wa.me/{e(settings.whatsapp_number)}" style="color:#047857;font-weight:bold;">wa.me/{e(settings.whatsapp_number)}</a></p>
-<p style="font-size:12px;color:#94a3b8;">RifaPay - Tus rifas en piloto autom&aacute;tico</p>
+<p style="font-size:12px;color:#94a3b8;">{e(brand())} - Tus rifas en piloto autom&aacute;tico</p>
 <p><a href="{e(order_url)}" style="display:inline-block;background:#059669;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;">Ver mis n&uacute;meros</a></p>
 </div></div>"""
 
@@ -303,7 +309,7 @@ SELFTEST_TEXT = (
     "Este es un correo automático de prueba de RifaPay (llega una vez por semana).\n"
     "Sirve para confirmar que el envío de emails sigue funcionando.\n"
     "Si dejás de recibir estos correos, algo se rompió: avisanos por WhatsApp.\n\n"
-    "RifaPay - Tus rifas en piloto automático"
+    "{brand} - Tus rifas en piloto automático"
 )
 
 ALERT_SUBJECT = "Alerta: el envío de correo de RifaPay falló"
@@ -312,7 +318,7 @@ ALERT_TEXT = (
     "Último estado: {status}\n"
     "Revisá las credenciales del proveedor de correo y los logs del servidor.\n"
     "Mientras tanto, los comprobantes siguen visibles en la web y en WhatsApp.\n\n"
-    "RifaPay - Tus rifas en piloto automático"
+    "{brand} - Tus rifas en piloto automático"
 )
 
 
@@ -321,11 +327,12 @@ def send_selftest_email(recipient: str) -> str:
     sin uso) y confirma que el envío sigue vivo."""
     if not recipient or not is_valid_email(recipient):
         return "skipped"
-    return _send_email(recipient, SELFTEST_SUBJECT, SELFTEST_TEXT)
+    return _send_email(recipient, SELFTEST_SUBJECT, SELFTEST_TEXT.format(brand=brand()))
 
 
 def send_email_alert(recipient: str, status: str) -> str:
     """Alerta de fallo. Usa la cadena de envío: si Brevo está caído, sale por Gmail."""
     if not recipient or not is_valid_email(recipient):
         return "skipped"
-    return _send_email(recipient, ALERT_SUBJECT, ALERT_TEXT.format(status=status))
+    return _send_email(recipient, ALERT_SUBJECT,
+                       ALERT_TEXT.format(status=status, brand=brand()))
